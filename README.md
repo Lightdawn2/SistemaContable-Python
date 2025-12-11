@@ -93,5 +93,5 @@ El proyecto sigue una arquitectura en capas:
 5. **Profesional**: Estructura estándar de proyectos Python
 
 ## Autor
-
-Sistema Contable basado en "Sistema contable1v0310.xlsm"
+Franco Cortés - Lightdawn2 
+Sistema Contable basado en "Sistema contable1v0310.xlsm" -> Hugo Moraga
