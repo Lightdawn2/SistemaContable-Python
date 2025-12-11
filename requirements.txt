@@ -1,0 +1,11 @@
+# Requisitos del Sistema de Contabilidad
+
+# No hay dependencias externas requeridas
+# El proyecto usa solo librerías estándar de Python:
+# - tkinter (incluido en Python)
+# - sqlite3 (incluido en Python)
+# - datetime (incluido en Python)
+# - os (incluido en Python)
+
+# Opcional (solo para desarrollo/análisis):
+openpyxl>=3.0.0  # Para leer archivos Excel
