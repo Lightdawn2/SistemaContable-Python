@@ -41,6 +41,16 @@ class ComprobantesView(tk.Toplevel):
         ttk.Label(frm_header, text="Número:").grid(row=0, column=0, sticky="w")
         self.lbl_numero = ttk.Label(frm_header, text="(automático)", foreground="gray")
         self.lbl_numero.grid(row=0, column=1, sticky="w", padx=4)
+        
+        # Buscador de comprobantes
+        ttk.Label(frm_header, text="Buscar por Nº:").grid(row=0, column=4, sticky="w", padx=(20, 0))
+        self.ent_buscar = ttk.Entry(frm_header, width=15)
+        self.ent_buscar.grid(row=0, column=5, sticky="w", padx=4)
+        self.ent_buscar.bind("<KeyRelease>", lambda e: self.filtrar_comprobantes())
+        # Registrar validación para solo números
+        vcmd = (self.register(self.validar_solo_numeros), '%S')
+        self.ent_buscar.config(validate='key', validatecommand=vcmd)
+        ttk.Button(frm_header, text="Limpiar Búsqueda", command=self.limpiar_busqueda).grid(row=0, column=6, padx=2)
 
         ttk.Label(frm_header, text="Fecha:").grid(row=0, column=2, sticky="w", padx=(20, 0))
         self.ent_fecha = ttk.Entry(frm_header, width=15)
@@ -256,6 +266,34 @@ class ComprobantesView(tk.Toplevel):
         for row in self.tree_detalle.get_children():
             self.tree_detalle.delete(row)
         self.actualizar_totales()
+    
+    def validar_solo_numeros(self, texto):
+        """Valida que solo se ingresen números en el campo de búsqueda"""
+        return texto.isdigit() or texto == ""
+    
+    def filtrar_comprobantes(self):
+        """Filtra los comprobantes por número"""
+        busqueda = self.ent_buscar.get().strip()
+        
+        # Limpiar el treeview
+        for row in self.tree_comprobantes.get_children():
+            self.tree_comprobantes.delete(row)
+        
+        # Si no hay búsqueda, mostrar todos
+        if not busqueda:
+            self.load_comprobantes()
+            return
+        
+        # Filtrar y mostrar solo los que coincidan
+        comprobantes = self.model.get_all()
+        for comp in comprobantes:
+            if str(comp[0]).startswith(busqueda):
+                self.tree_comprobantes.insert("", "end", values=comp)
+    
+    def limpiar_busqueda(self):
+        """Limpia la búsqueda y muestra todos los comprobantes"""
+        self.ent_buscar.delete(0, tk.END)
+        self.load_comprobantes()
     
     def on_closing(self):
         """Maneja el cierre de la ventana"""
