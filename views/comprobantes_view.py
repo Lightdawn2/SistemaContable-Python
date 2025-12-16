@@ -4,6 +4,7 @@ Vista de Comprobantes Contables
 import tkinter as tk
 from tkinter import ttk, messagebox
 from datetime import datetime
+from tkcalendar import DateEntry
 from models.comprobantes import ComprobantesModel
 from models.plan_cuentas import PlanCuentasModel
 from config import DATE_FORMAT
@@ -53,9 +54,10 @@ class ComprobantesView(tk.Toplevel):
         ttk.Button(frm_header, text="Limpiar Búsqueda", command=self.limpiar_busqueda).grid(row=0, column=6, padx=2)
 
         ttk.Label(frm_header, text="Fecha:").grid(row=0, column=2, sticky="w", padx=(20, 0))
-        self.ent_fecha = ttk.Entry(frm_header, width=15)
+        self.ent_fecha = DateEntry(frm_header, width=13, background='darkblue',
+                                   foreground='white', borderwidth=2,
+                                   date_pattern='yyyy-mm-dd')
         self.ent_fecha.grid(row=0, column=3, sticky="w", padx=4)
-        self.ent_fecha.insert(0, datetime.today().strftime(DATE_FORMAT))
 
         ttk.Label(frm_header, text="Glosa:").grid(row=1, column=0, sticky="w")
         self.ent_glosa = ttk.Entry(frm_header, width=60)
@@ -243,7 +245,9 @@ class ComprobantesView(tk.Toplevel):
 
         self.limpiar_campos()
         self.lbl_numero.config(text=str(numero))
-        self.ent_fecha.insert(0, comp[1])
+        # Convertir fecha string a objeto datetime
+        fecha_obj = datetime.strptime(comp[1], '%Y-%m-%d')
+        self.ent_fecha.set_date(fecha_obj)
         self.ent_glosa.insert(0, comp[2])
 
         for det in detalles:
@@ -259,8 +263,7 @@ class ComprobantesView(tk.Toplevel):
     def limpiar_campos(self):
         """Limpia todos los campos"""
         self.lbl_numero.config(text="(automático)")
-        self.ent_fecha.delete(0, tk.END)
-        self.ent_fecha.insert(0, datetime.today().strftime(DATE_FORMAT))
+        self.ent_fecha.set_date(datetime.today())
         self.ent_glosa.delete(0, tk.END)
         self.detalle_lineas = []
         for row in self.tree_detalle.get_children():

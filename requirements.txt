@@ -1,7 +1,9 @@
 # Requisitos del Sistema de Contabilidad
 
-# No hay dependencias externas requeridas
-# El proyecto usa solo librerías estándar de Python:
+# Librerías externas requeridas
+tkcalendar>=1.6.1  # Widget de calendario para filtros de fecha
+
+# Librerías estándar de Python (no requieren instalación):
 # - tkinter (incluido en Python)
 # - sqlite3 (incluido en Python)
 # - datetime (incluido en Python)

@@ -62,10 +62,17 @@ def init_db():
             neto REAL NOT NULL,
             iva REAL NOT NULL,
             total REAL NOT NULL,
+            exenta INTEGER NOT NULL DEFAULT 0,
             numero_comprobante INTEGER,
             FOREIGN KEY (numero_comprobante) REFERENCES comprobantes(numero)
         )
     """)
+
+    # Migración simple: asegurar columna 'exenta' en libro_compras
+    c.execute("PRAGMA table_info(libro_compras)")
+    columnas = [row[1] for row in c.fetchall()]
+    if 'exenta' not in columnas:
+        c.execute("ALTER TABLE libro_compras ADD COLUMN exenta INTEGER NOT NULL DEFAULT 0")
     
     # Tabla: Libro de Ventas
     c.execute("""

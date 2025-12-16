@@ -11,7 +11,7 @@ class MainWindow(tk.Tk):
     def __init__(self):
         super().__init__()
         self.title("Sistema Contable - Menú Principal")
-        self.geometry("400x400")
+        self.geometry("400x450")
         self.resizable(False, False)
         self.create_widgets()
 
@@ -29,6 +29,10 @@ class MainWindow(tk.Tk):
                   command=self.open_plan_cuentas, width=35).pack(pady=4)
         ttk.Button(frm, text="Comprobantes Contables", 
                   command=self.open_comprobantes, width=35).pack(pady=4)
+        ttk.Button(frm, text="Libro Diario", 
+                  command=self.open_libro_diario, width=35).pack(pady=4)
+        ttk.Button(frm, text="Balance de Comprobación", 
+                  command=self.open_balance_comprobacion, width=35).pack(pady=4)
         ttk.Button(frm, text="Estado de Situación Financiera", 
                   command=self.open_esf, width=35).pack(pady=4)
         ttk.Button(frm, text="Estado de Resultados", 
@@ -52,6 +56,18 @@ class MainWindow(tk.Tk):
         from views.comprobantes_view import ComprobantesView
         if not any(isinstance(w, ComprobantesView) for w in self.winfo_children()):
             ComprobantesView(self)
+
+    def open_libro_diario(self):
+        """Abre la ventana del Libro Diario"""
+        from views.libro_diario_view import LibroDiarioView
+        if not any(isinstance(w, LibroDiarioView) for w in self.winfo_children()):
+            LibroDiarioView(self)
+
+    def open_balance_comprobacion(self):
+        """Abre la ventana del Balance de Comprobación"""
+        from views.balance_comprobacion_view import BalanceComprobacionView
+        if not any(isinstance(w, BalanceComprobacionView) for w in self.winfo_children()):
+            BalanceComprobacionView(self)
 
     def open_esf(self):
         """Abre el Estado de Situación Financiera"""
