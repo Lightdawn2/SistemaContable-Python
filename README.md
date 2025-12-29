@@ -1,6 +1,13 @@
 # Sistema de Contabilidad
 
-Sistema de contabilidad completo desarrollado en Python con interfaz gráfica Tkinter.
+Sistema de contabilidad completo desarrollado en Python con interfaz gráfica Tkinter y navegación lateral.
+
+## 🎨 Interfaz
+
+- **Panel lateral permanente** para navegación rápida entre secciones
+- **Área de contenido** que cambia dinámicamente sin abrir ventanas adicionales
+- **Vista inicial**: Plan de Cuentas (ideal para comenzar a configurar el sistema)
+- Ventana única y moderna (1400x700px)
 
 ## Estructura del Proyecto
 
@@ -61,7 +68,7 @@ CrudPython/
 - Python 3.7 o superior
 - tkinter (incluido en Python)
 - sqlite3 (incluido en Python)
-- openpyxl (solo para análisis del archivo Excel original)
+- openpyxl (requerido para exportación a Excel)
 
 ## Instalación y Uso
 
@@ -91,6 +98,18 @@ El proyecto sigue una arquitectura en capas:
 3. **Reutilización**: Los modelos y utilidades pueden usarse en diferentes vistas
 4. **Escalabilidad**: Fácil agregar nuevas funcionalidades
 5. **Profesional**: Estructura estándar de proyectos Python
+
+## Exportación a Excel
+
+- Botón en la ventana principal: "📊 Exportar a Excel".
+- Genera un archivo con hojas: Resumen Evaluación, PlanCuentas, Comprobantes, LibroDiario, Balance de Comprobación, Estado de Situación, Estado de Resultados.
+- Incluye fórmulas y validaciones para verificar el cuadre Debe/Haber y totales.
+- La exportación se ejecuta en segundo plano (no bloquea la interfaz) y muestra mensajes de éxito o error.
+
+### Cómo usar
+- Abrir la aplicación y cargar comprobantes normalmente.
+- En el menú principal, elegir "📊 Exportar a Excel" y seleccionar la ubicación.
+- Revisar la hoja "Resumen Evaluación" para validar el estado general.
 
 ## Autor
 Franco Cortés - Lightdawn2 

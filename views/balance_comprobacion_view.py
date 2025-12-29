@@ -8,25 +8,14 @@ from datetime import datetime
 from models.balance_comprobacion import BalanceComprobacionModel
 
 
-class BalanceComprobacionView(tk.Toplevel):
+class BalanceComprobacionView(ttk.Frame):
     """Vista del Balance de Comprobación"""
     
     def __init__(self, master=None):
         super().__init__(master)
-        self.master_window = master
-        self.title("Balance de Comprobación")
-        self.geometry("1300x700")
-        self.resizable(True, True)
         self.model = BalanceComprobacionModel()
         self.create_widgets()
         self.cargar_balance()
-        
-        # Ocultar ventana principal
-        if self.master_window:
-            self.master_window.withdraw()
-        
-        # Manejar el cierre de la ventana
-        self.protocol("WM_DELETE_WINDOW", self.on_closing)
 
     def create_widgets(self):
         """Crea los widgets de la interfaz"""
@@ -133,8 +122,6 @@ class BalanceComprobacionView(tk.Toplevel):
         
         ttk.Button(frm_buttons, text="Actualizar", 
                   command=self.cargar_balance).pack(side="left", padx=4)
-        ttk.Button(frm_buttons, text="← Volver al Menú", 
-                  command=self.on_closing).pack(side="right", padx=4)
     
     def aplicar_filtro(self):
         """Aplica el filtro de fechas"""
@@ -192,9 +179,3 @@ class BalanceComprobacionView(tk.Toplevel):
                 text=f"✗ BALANCE DESCUADRADO - {diferencias}",
                 foreground="red"
             )
-
-    def on_closing(self):
-        """Maneja el cierre de la ventana"""
-        if self.master_window:
-            self.master_window.deiconify()
-        self.destroy()

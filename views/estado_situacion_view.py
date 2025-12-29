@@ -1,4 +1,4 @@
-"""
+"""  
 Vista del Estado de Situación Financiera
 """
 import tkinter as tk
@@ -6,25 +6,14 @@ from tkinter import ttk
 from models.reportes import ReportesModel
 
 
-class EstadoSituacionView(tk.Toplevel):
+class EstadoSituacionView(ttk.Frame):
     """Vista del Estado de Situación Financiera (Balance)"""
     
     def __init__(self, master=None):
         super().__init__(master)
-        self.master_window = master
-        self.title("Estado de Situación Financiera")
-        self.geometry("1000x700")
-        self.resizable(True, True)
         self.model = ReportesModel()
         self.create_widgets()
         self.generar_reporte()
-        
-        # Ocultar ventana principal
-        if self.master_window:
-            self.master_window.withdraw()
-        
-        # Manejar el cierre de la ventana
-        self.protocol("WM_DELETE_WINDOW", self.on_closing)
 
     def create_widgets(self):
         frm_header = ttk.Frame(self)
@@ -35,7 +24,6 @@ class EstadoSituacionView(tk.Toplevel):
         frm_buttons = ttk.Frame(frm_header)
         frm_buttons.pack(pady=5)
         ttk.Button(frm_buttons, text="Actualizar", command=self.generar_reporte).pack(side="left", padx=4)
-        ttk.Button(frm_buttons, text="← Volver al Menú", command=self.on_closing).pack(side="left", padx=4)
 
         frm_main = ttk.Frame(self)
         frm_main.pack(fill="both", expand=True, padx=10, pady=10)
@@ -172,9 +160,3 @@ class EstadoSituacionView(tk.Toplevel):
             tree.tag_configure("bold", font=("Arial", 10, "bold"))
             tree.tag_configure("total", font=("Arial", 9, "bold"), background="#e0e0e0")
             tree.tag_configure("grand_total", font=("Arial", 11, "bold"), background="#c0c0c0")
-    
-    def on_closing(self):
-        """Maneja el cierre de la ventana"""
-        if self.master_window:
-            self.master_window.deiconify()
-        self.destroy()

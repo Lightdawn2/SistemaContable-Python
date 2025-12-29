@@ -7,28 +7,23 @@ from models.plan_cuentas import PlanCuentasModel
 from config import ELEMENTOS
 
 
-class PlanCuentasView(tk.Toplevel):
-    """Ventana de gestión del Plan de Cuentas"""
+class PlanCuentasView(ttk.Frame):
+    """Vista de gestión del Plan de Cuentas"""
     
     def __init__(self, master=None):
         super().__init__(master)
-        self.master_window = master
-        self.title("Plan de Cuentas")
-        self.geometry("1000x600")
-        self.resizable(True, True)
         self.model = PlanCuentasModel()
         self.create_widgets()
         self.load_cuentas()
-        
-        # Ocultar ventana principal
-        if self.master_window:
-            self.master_window.withdraw()
-        
-        # Manejar el cierre de la ventana
-        self.protocol("WM_DELETE_WINDOW", self.on_closing)
 
     def create_widgets(self):
         """Crea los widgets de la interfaz"""
+        # Título
+        header = ttk.Frame(self)
+        header.pack(fill="x", padx=10, pady=10)
+        ttk.Label(header, text="Plan de Cuentas", 
+                 font=("Arial", 14, "bold")).pack(side="left")
+        
         # Frame del formulario
         frm_form = ttk.Frame(self)
         frm_form.pack(fill="x", padx=10, pady=6)
@@ -68,7 +63,6 @@ class PlanCuentasView(tk.Toplevel):
         ttk.Button(frm_buttons, text="Actualizar", command=self.actualizar).pack(side="left", padx=4)
         ttk.Button(frm_buttons, text="Eliminar", command=self.eliminar).pack(side="left", padx=4)
         ttk.Button(frm_buttons, text="Limpiar", command=self.limpiar_campos).pack(side="left", padx=4)
-        ttk.Button(frm_buttons, text="← Volver al Menú", command=self.on_closing).pack(side="right", padx=4)
 
         # Treeview
         columns = ("codigo", "nombre", "elemento", "categoria", "subcategoria", "grupo")
@@ -183,9 +177,3 @@ class PlanCuentasView(tk.Toplevel):
         self.ent_grupo.delete(0, tk.END)
         if self.tree.selection():
             self.tree.selection_remove(self.tree.selection())
-    
-    def on_closing(self):
-        """Maneja el cierre de la ventana"""
-        if self.master_window:
-            self.master_window.deiconify()
-        self.destroy()

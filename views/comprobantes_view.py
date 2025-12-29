@@ -10,31 +10,26 @@ from models.plan_cuentas import PlanCuentasModel
 from config import DATE_FORMAT
 
 
-class ComprobantesView(tk.Toplevel):
-    """Ventana de gestión de Comprobantes Contables"""
+class ComprobantesView(ttk.Frame):
+    """Vista de gestión de Comprobantes Contables"""
     
     def __init__(self, master=None):
         super().__init__(master)
-        self.master_window = master
-        self.title("Comprobantes Contables")
-        self.geometry("1100x700")
-        self.resizable(True, True)
         self.model = ComprobantesModel()
         self.plan_model = PlanCuentasModel()
         self.detalle_lineas = []
         self.create_widgets()
         self.load_comprobantes()
         self.load_cuentas()
-        
-        # Ocultar ventana principal
-        if self.master_window:
-            self.master_window.withdraw()
-        
-        # Manejar el cierre de la ventana
-        self.protocol("WM_DELETE_WINDOW", self.on_closing)
 
     def create_widgets(self):
         """Crea los widgets de la interfaz"""
+        # Título
+        header = ttk.Frame(self)
+        header.pack(fill="x", padx=10, pady=10)
+        ttk.Label(header, text="Comprobantes Contables", 
+                 font=("Arial", 14, "bold")).pack(side="left")
+        
         # Frame superior: Datos del comprobante
         frm_header = ttk.LabelFrame(self, text="Datos del Comprobante", padding=10)
         frm_header.pack(fill="x", padx=10, pady=6)
@@ -111,7 +106,6 @@ class ComprobantesView(tk.Toplevel):
 
         ttk.Button(frm_buttons, text="Guardar Comprobante", command=self.guardar_comprobante).pack(side="left", padx=4)
         ttk.Button(frm_buttons, text="Limpiar", command=self.limpiar_campos).pack(side="left", padx=4)
-        ttk.Button(frm_buttons, text="← Volver al Menú", command=self.on_closing).pack(side="right", padx=4)
 
         # Lista de comprobantes
         frm_list = ttk.LabelFrame(self, text="Comprobantes Guardados", padding=10)
@@ -297,9 +291,3 @@ class ComprobantesView(tk.Toplevel):
         """Limpia la búsqueda y muestra todos los comprobantes"""
         self.ent_buscar.delete(0, tk.END)
         self.load_comprobantes()
-    
-    def on_closing(self):
-        """Maneja el cierre de la ventana"""
-        if self.master_window:
-            self.master_window.deiconify()
-        self.destroy()

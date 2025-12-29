@@ -2,8 +2,8 @@
 Sistema de Contabilidad
 Punto de entrada principal de la aplicación
 
-Autor: Sistema Contable v2.0
-Fecha: Diciembre 2025
+Autor: Franco Cortés
+Fecha: Noviembre 2025
 """
 from database import init_db
 from views.main_window import MainWindow
@@ -24,3 +24,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+

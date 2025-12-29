@@ -10,25 +10,14 @@ from config import DATE_FORMAT, TIPOS_DOCUMENTO
 from utils.helpers import calculate_iva
 
 
-class LibroVentasView(tk.Toplevel):
+class LibroVentasView(ttk.Frame):
     """Vista del Libro de Ventas"""
     
     def __init__(self, master=None):
         super().__init__(master)
-        self.master_window = master
-        self.title("Libro de Ventas")
-        self.geometry("1100x600")
-        self.resizable(True, True)
         self.model = LibroVentasModel()
         self.create_widgets()
         self.load_ventas()
-        
-        # Ocultar ventana principal
-        if self.master_window:
-            self.master_window.withdraw()
-        
-        # Manejar el cierre de la ventana
-        self.protocol("WM_DELETE_WINDOW", self.on_closing)
 
     def create_widgets(self):
         frm_form = ttk.LabelFrame(self, text="Registrar Venta", padding=10)
@@ -75,7 +64,6 @@ class LibroVentasView(tk.Toplevel):
         ttk.Button(frm_buttons, text="Guardar", command=self.guardar).pack(side="left", padx=4)
         ttk.Button(frm_buttons, text="Eliminar", command=self.eliminar).pack(side="left", padx=4)
         ttk.Button(frm_buttons, text="Limpiar", command=self.limpiar_campos).pack(side="left", padx=4)
-        ttk.Button(frm_buttons, text="← Volver al Menú", command=self.on_closing).pack(side="right", padx=4)
 
         # Frame de filtros
         frm_filtros = ttk.LabelFrame(self, text="Filtrar por Fecha")
@@ -211,9 +199,3 @@ class LibroVentasView(tk.Toplevel):
             entry.delete(0, tk.END)
         if self.tree.selection():
             self.tree.selection_remove(self.tree.selection())
-    
-    def on_closing(self):
-        """Maneja el cierre de la ventana"""
-        if self.master_window:
-            self.master_window.deiconify()
-        self.destroy()

@@ -93,17 +93,19 @@ def init_db():
     
     conn.commit()
     
-    # Insertar plan de cuentas inicial si está vacío
-    c.execute("SELECT COUNT(*) FROM plan_cuentas")
-    if c.fetchone()[0] == 0:
-        _insertar_cuentas_iniciales(c)
-        conn.commit()
+    # NO insertar plan de cuentas inicial - Los alumnos lo crearán desde cero
+    # El sistema comienza completamente vacío para fines educativos
     
     conn.close()
 
 
 def _insertar_cuentas_iniciales(cursor):
-    """Inserta el plan de cuentas inicial"""
+    """
+    Inserta el plan de cuentas inicial
+    NOTA: Esta función ya NO se ejecuta automáticamente.
+    Se mantiene aquí como referencia para los profesores/alumnos.
+    Los alumnos deben crear su propio plan de cuentas desde la interfaz.
+    """
     cuentas_iniciales = [
         # Activos Corrientes
         (11001, 'Caja', 'Activo', 'Activo Corriente', 'Disponible', 'Efectivo'),
@@ -149,3 +151,20 @@ def _insertar_cuentas_iniciales(cursor):
         "INSERT INTO plan_cuentas (codigo, nombre, elemento, categoria, subcategoria, grupo) VALUES (?, ?, ?, ?, ?, ?)",
         cuentas_iniciales
     )
+
+
+def reset_database():
+    """
+    Resetea completamente la base de datos.
+    ELIMINA todos los datos y crea las tablas vacías de nuevo.
+    Útil para que los alumnos puedan empezar desde cero si cometen errores.
+    """
+    import os
+    from config import DB_FILE
+    
+    # Eliminar el archivo de base de datos si existe
+    if os.path.exists(DB_FILE):
+        os.remove(DB_FILE)
+    
+    # Crear nuevamente las tablas vacías
+    init_db()

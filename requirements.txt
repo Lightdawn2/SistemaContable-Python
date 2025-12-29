@@ -2,12 +2,11 @@
 
 # Librerías externas requeridas
 tkcalendar>=1.6.1  # Widget de calendario para filtros de fecha
+openpyxl>=3.0.0   # Para exportar reportes a Excel
+Pillow>=10.0.0    # Para manejo de imágenes (logo)
 
 # Librerías estándar de Python (no requieren instalación):
 # - tkinter (incluido en Python)
 # - sqlite3 (incluido en Python)
 # - datetime (incluido en Python)
 # - os (incluido en Python)
-
-# Opcional (solo para desarrollo/análisis):
-openpyxl>=3.0.0  # Para leer archivos Excel
