@@ -246,4 +246,4 @@ Esto asegura que las cuentas como "Caja" nunca muestren valores negativos incorr
 
 ## Autor
 Franco Cortés - Lightdawn2 
-Sistema Contable basado en "Sistema contable1v0310.xlsm" -> Hugo Moraga
+Sistema Contable basado en "Sistema contable1v0310.xlsm" -> Doctor en Economía y Administración, Hugo Moraga
