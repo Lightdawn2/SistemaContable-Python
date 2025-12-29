@@ -60,6 +60,11 @@ class EstadoSituacionView(ttk.Frame):
 
         cuentas = self.model.get_estado_situacion_financiera()
 
+        # Calcular utilidad e impuesto del ejercicio
+        resultados = self.model.calcular_utilidad_impuesto()
+        utilidad_ejercicio = resultados['utilidad_ejercicio']
+        impuesto_por_pagar = resultados['impuesto']
+        
         activos_corrientes = []
         activos_no_corrientes = []
         pasivos_corrientes = []
@@ -115,13 +120,20 @@ class EstadoSituacionView(ttk.Frame):
                                 tags=("grand_total",))
 
         # Insertar pasivos y patrimonio
-        if pasivos_corrientes:
+        if pasivos_corrientes or impuesto_por_pagar > 0:
             parent_pc = self.tree_pasivos.insert("", "end", text="", 
                                                  values=("PASIVOS CORRIENTES", ""), tags=("bold",))
             total_pc = sum(s for _, _, s in pasivos_corrientes)
             for codigo, nombre, saldo in pasivos_corrientes:
                 self.tree_pasivos.insert(parent_pc, "end", text="", 
                                         values=(f"{codigo} - {nombre}", f"${saldo:,.0f}"))
+            
+            # Agregar Impuesto por Pagar si existe
+            if impuesto_por_pagar > 0:
+                self.tree_pasivos.insert(parent_pc, "end", text="", 
+                                        values=("Impuesto por Pagar", f"${impuesto_por_pagar:,.0f}"))
+                total_pc += impuesto_por_pagar
+            
             self.tree_pasivos.insert(parent_pc, "end", text="", 
                                     values=("Total Pasivos Corrientes", f"${total_pc:,.0f}"), 
                                     tags=("total",))
@@ -137,20 +149,29 @@ class EstadoSituacionView(ttk.Frame):
                                     values=("Total Pasivos No Corrientes", f"${total_pnc:,.0f}"), 
                                     tags=("total",))
 
-        if patrimonio:
+        if patrimonio or utilidad_ejercicio != 0:
             parent_pat = self.tree_pasivos.insert("", "end", text="", 
                                                   values=("PATRIMONIO", ""), tags=("bold",))
             total_pat = sum(s for _, _, s in patrimonio)
             for codigo, nombre, saldo in patrimonio:
                 self.tree_pasivos.insert(parent_pat, "end", text="", 
                                         values=(f"{codigo} - {nombre}", f"${saldo:,.0f}"))
+            
+            # Agregar Utilidad del Ejercicio
+            if utilidad_ejercicio != 0:
+                self.tree_pasivos.insert(parent_pat, "end", text="", 
+                                        values=("Utilidad del Ejercicio", f"${utilidad_ejercicio:,.0f}"))
+                total_pat += utilidad_ejercicio
+            
             self.tree_pasivos.insert(parent_pat, "end", text="", 
                                     values=("Total Patrimonio", f"${total_pat:,.0f}"), 
                                     tags=("total",))
 
-        total_pasivos_patrimonio = (sum(s for _, _, s in pasivos_corrientes) + 
-                                    sum(s for _, _, s in pasivos_no_corrientes) + 
-                                    sum(s for _, _, s in patrimonio))
+        total_pasivos = (sum(s for _, _, s in pasivos_corrientes) + 
+                        sum(s for _, _, s in pasivos_no_corrientes) + impuesto_por_pagar)
+        total_patrimonio_completo = sum(s for _, _, s in patrimonio) + utilidad_ejercicio
+        total_pasivos_patrimonio = total_pasivos + total_patrimonio_completo
+        
         self.tree_pasivos.insert("", "end", text="", 
                                 values=("TOTAL PASIVOS + PATRIMONIO", f"${total_pasivos_patrimonio:,.0f}"), 
                                 tags=("grand_total",))

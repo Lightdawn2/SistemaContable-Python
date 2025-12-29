@@ -427,6 +427,8 @@ class ExcelExporter:
     
     def export_estado_financiero(self):
         """Exporta el Estado de Situación Financiera"""
+        from config import IMPUESTO_RENTA_RATE
+        
         ws = self.wb.create_sheet("Estado de Situación")
         
         # Título
@@ -436,6 +438,12 @@ class ExcelExporter:
         title.font = Font(name='Calibri', size=14, bold=True, color="FFFFFF")
         title.fill = PatternFill(start_color=self.color_header, end_color=self.color_header, fill_type="solid")
         title.alignment = Alignment(horizontal='center', vertical='center')
+        
+        # Calcular utilidad e impuesto
+        from models.reportes import ReportesModel
+        resultados = ReportesModel.calcular_utilidad_impuesto()
+        utilidad_ejercicio = resultados['utilidad_ejercicio']
+        impuesto_por_pagar = resultados['impuesto']
         
         row = 3
         
@@ -487,6 +495,23 @@ class ExcelExporter:
                 seccion_total += saldo
                 row += 1
             
+            # Agregar elementos calculados
+            if elemento == 'Pasivo' and impuesto_por_pagar > 0:
+                ws.cell(row=row, column=1).value = "Impuesto por Pagar"
+                ws.cell(row=row, column=2).value = impuesto_por_pagar
+                self.format_text(ws.cell(row=row, column=1))
+                self.format_number(ws.cell(row=row, column=2))
+                seccion_total += impuesto_por_pagar
+                row += 1
+            
+            if elemento == 'Patrimonio' and utilidad_ejercicio != 0:
+                ws.cell(row=row, column=1).value = "Utilidad del Ejercicio"
+                ws.cell(row=row, column=2).value = utilidad_ejercicio
+                self.format_text(ws.cell(row=row, column=1))
+                self.format_number(ws.cell(row=row, column=2))
+                seccion_total += utilidad_ejercicio
+                row += 1
+            
             # Total de sección
             total_cell = ws.cell(row=row, column=1)
             total_cell.value = f"Total {seccion_nombre}"
@@ -506,7 +531,9 @@ class ExcelExporter:
         return ws
     
     def export_estado_resultados(self):
-        """Exporta el Estado de Resultados"""
+        """Exporta el Estado de Resultados según estructura NIIF"""
+        from config import IMPUESTO_RENTA_RATE
+        
         ws = self.wb.create_sheet("Estado de Resultados")
         
         # Título
@@ -519,8 +546,8 @@ class ExcelExporter:
         
         row = 3
         
-        # Ingresos
-        ws.cell(row=row, column=1).value = "INGRESOS"
+        # INGRESOS DE ACTIVIDADES ORDINARIAS
+        ws.cell(row=row, column=1).value = "INGRESOS DE ACTIVIDADES ORDINARIAS"
         self.format_subheader(ws.cell(row=row, column=1))
         row += 1
         
@@ -546,15 +573,15 @@ class ExcelExporter:
             row += 1
         
         # Total ingresos
-        ws.cell(row=row, column=1).value = "Total Ingresos"
+        ws.cell(row=row, column=1).value = "Total Ingresos Ordinarios"
         self.format_total(ws.cell(row=row, column=1))
         total_ing = ws.cell(row=row, column=2)
         total_ing.value = total_ingresos
         self.format_total(total_ing, is_number=True)
         row += 2
         
-        # Costos
-        ws.cell(row=row, column=1).value = "COSTOS"
+        # COSTO DE VENTAS
+        ws.cell(row=row, column=1).value = "COSTO DE VENTAS"
         self.format_subheader(ws.cell(row=row, column=1))
         row += 1
         
@@ -580,65 +607,174 @@ class ExcelExporter:
             row += 1
         
         # Total costos
-        ws.cell(row=row, column=1).value = "Total Costos"
+        ws.cell(row=row, column=1).value = "Total Costo de Ventas"
         self.format_total(ws.cell(row=row, column=1))
         total_cost = ws.cell(row=row, column=2)
         total_cost.value = total_costos
         self.format_total(total_cost, is_number=True)
         row += 2
         
-        # Gastos
-        ws.cell(row=row, column=1).value = "GASTOS"
+        # UTILIDAD BRUTA
+        utilidad_bruta = total_ingresos - total_costos
+        ws.cell(row=row, column=1).value = "UTILIDAD BRUTA"
+        self.format_total(ws.cell(row=row, column=1))
+        ub_cell = ws.cell(row=row, column=2)
+        ub_cell.value = utilidad_bruta
+        self.format_total(ub_cell, is_number=True)
+        row += 2
+        
+        # GASTOS DE ADMINISTRACIÓN
+        ws.cell(row=row, column=1).value = "GASTOS DE ADMINISTRACIÓN"
         self.format_subheader(ws.cell(row=row, column=1))
         row += 1
         
-        query_gastos = """
+        query_gastos_admin = """
             SELECT 
                 p.nombre,
                 COALESCE(SUM(d.debe), 0) - COALESCE(SUM(d.haber), 0) as total_gastos
             FROM plan_cuentas p
             LEFT JOIN detalle_comprobantes d ON p.codigo = d.codigo_cuenta
-            WHERE p.elemento = 'Gasto'
+            WHERE p.elemento = 'Gasto' AND p.categoria LIKE '%Administración%'
             GROUP BY p.codigo, p.nombre
             HAVING total_gastos <> 0
             ORDER BY p.codigo
         """
-        gastos_data = fetch_all(query_gastos)
-        total_gastos = 0
-        for nombre, monto in gastos_data:
+        gastos_admin_data = fetch_all(query_gastos_admin)
+        total_gastos_admin = 0
+        for nombre, monto in gastos_admin_data:
             ws.cell(row=row, column=1).value = nombre
             ws.cell(row=row, column=2).value = monto
             self.format_text(ws.cell(row=row, column=1))
             self.format_number(ws.cell(row=row, column=2))
-            total_gastos += monto
+            total_gastos_admin += monto
             row += 1
         
-        # Total gastos
-        ws.cell(row=row, column=1).value = "Total Gastos"
+        if gastos_admin_data:
+            ws.cell(row=row, column=1).value = "Total Gastos Administración"
+            self.format_total(ws.cell(row=row, column=1))
+            total_ga = ws.cell(row=row, column=2)
+            total_ga.value = total_gastos_admin
+            self.format_total(total_ga, is_number=True)
+            row += 2
+        
+        # GASTOS DE VENTAS
+        ws.cell(row=row, column=1).value = "GASTOS DE VENTAS"
+        self.format_subheader(ws.cell(row=row, column=1))
+        row += 1
+        
+        query_gastos_ventas = """
+            SELECT 
+                p.nombre,
+                COALESCE(SUM(d.debe), 0) - COALESCE(SUM(d.haber), 0) as total_gastos
+            FROM plan_cuentas p
+            LEFT JOIN detalle_comprobantes d ON p.codigo = d.codigo_cuenta
+            WHERE p.elemento = 'Gasto' AND (p.categoria LIKE '%Ventas%' OR p.categoria LIKE '%Comercial%')
+            GROUP BY p.codigo, p.nombre
+            HAVING total_gastos <> 0
+            ORDER BY p.codigo
+        """
+        gastos_ventas_data = fetch_all(query_gastos_ventas)
+        total_gastos_ventas = 0
+        for nombre, monto in gastos_ventas_data:
+            ws.cell(row=row, column=1).value = nombre
+            ws.cell(row=row, column=2).value = monto
+            self.format_text(ws.cell(row=row, column=1))
+            self.format_number(ws.cell(row=row, column=2))
+            total_gastos_ventas += monto
+            row += 1
+        
+        if gastos_ventas_data:
+            ws.cell(row=row, column=1).value = "Total Gastos de Ventas"
+            self.format_total(ws.cell(row=row, column=1))
+            total_gv = ws.cell(row=row, column=2)
+            total_gv.value = total_gastos_ventas
+            self.format_total(total_gv, is_number=True)
+            row += 2
+        
+        # RESULTADO OPERACIONAL
+        resultado_operacional = utilidad_bruta - total_gastos_admin - total_gastos_ventas
+        ws.cell(row=row, column=1).value = "RESULTADO OPERACIONAL"
         self.format_total(ws.cell(row=row, column=1))
-        total_gas = ws.cell(row=row, column=2)
-        total_gas.value = total_gastos
-        self.format_total(total_gas, is_number=True)
+        ro_cell = ws.cell(row=row, column=2)
+        ro_cell.value = resultado_operacional
+        ro_cell.font = Font(name='Calibri', size=11, bold=True)
+        ro_cell.fill = PatternFill(start_color="D0D0D0", end_color="D0D0D0", fill_type="solid")
+        ro_cell.number_format = '#,##0.00'
+        ro_cell.border = self.border_thin
         row += 2
         
-        # Resultado neto
-        ws.cell(row=row, column=1).value = "RESULTADO NETO"
-        resultado = total_ingresos - total_costos - total_gastos
+        # COSTOS FINANCIEROS
+        query_gastos_financieros = """
+            SELECT 
+                p.nombre,
+                COALESCE(SUM(d.debe), 0) - COALESCE(SUM(d.haber), 0) as total_gastos
+            FROM plan_cuentas p
+            LEFT JOIN detalle_comprobantes d ON p.codigo = d.codigo_cuenta
+            WHERE p.elemento = 'Gasto' AND p.categoria LIKE '%Financier%'
+            GROUP BY p.codigo, p.nombre
+            HAVING total_gastos <> 0
+            ORDER BY p.codigo
+        """
+        gastos_financieros_data = fetch_all(query_gastos_financieros)
+        total_gastos_financieros = 0
         
+        if gastos_financieros_data:
+            ws.cell(row=row, column=1).value = "COSTOS FINANCIEROS"
+            self.format_subheader(ws.cell(row=row, column=1))
+            row += 1
+            
+            for nombre, monto in gastos_financieros_data:
+                ws.cell(row=row, column=1).value = nombre
+                ws.cell(row=row, column=2).value = monto
+                self.format_text(ws.cell(row=row, column=1))
+                self.format_number(ws.cell(row=row, column=2))
+                total_gastos_financieros += monto
+                row += 1
+            
+            ws.cell(row=row, column=1).value = "Total Costos Financieros"
+            self.format_total(ws.cell(row=row, column=1))
+            total_gf = ws.cell(row=row, column=2)
+            total_gf.value = total_gastos_financieros
+            self.format_total(total_gf, is_number=True)
+            row += 2
+        
+        # RESULTADO ANTES DE IMPUESTO
+        resultado_antes_impuesto = resultado_operacional - total_gastos_financieros
+        ws.cell(row=row, column=1).value = "RESULTADO ANTES DE IMPUESTO A LA RENTA"
+        self.format_total(ws.cell(row=row, column=1))
+        rai_cell = ws.cell(row=row, column=2)
+        rai_cell.value = resultado_antes_impuesto
+        rai_cell.font = Font(name='Calibri', size=11, bold=True)
+        rai_cell.fill = PatternFill(start_color="C0C0C0", end_color="C0C0C0", fill_type="solid")
+        rai_cell.number_format = '#,##0.00'
+        rai_cell.border = self.border_thin
+        row += 2
+        
+        # IMPUESTO A LA RENTA
+        impuesto = resultado_antes_impuesto * IMPUESTO_RENTA_RATE if resultado_antes_impuesto > 0 else 0
+        ws.cell(row=row, column=1).value = f"Gasto por Impuesto a la Renta ({int(IMPUESTO_RENTA_RATE*100)}%)"
+        ws.cell(row=row, column=2).value = impuesto
+        self.format_text(ws.cell(row=row, column=1))
+        self.format_number(ws.cell(row=row, column=2))
+        row += 2
+        
+        # GANANCIA (PÉRDIDA) DEL EJERCICIO
+        resultado_ejercicio = resultado_antes_impuesto - impuesto
         resultado_cell = ws.cell(row=row, column=1)
-        resultado_cell.value = "RESULTADO NETO (Utilidad/Pérdida)"
-        resultado_cell.font = Font(name='Calibri', size=11, bold=True)
-        resultado_cell.fill = self.fill_total
+        resultado_cell.value = "GANANCIA (PÉRDIDA) DEL EJERCICIO"
+        resultado_cell.font = Font(name='Calibri', size=12, bold=True)
+        resultado_cell.fill = PatternFill(start_color="B0D0FF", end_color="B0D0FF", fill_type="solid")
+        resultado_cell.border = self.border_thin
         
         resultado_val = ws.cell(row=row, column=2)
-        resultado_val.value = resultado
+        resultado_val.value = resultado_ejercicio
         resultado_val.number_format = '#,##0.00'
-        resultado_val.font = Font(name='Calibri', size=11, bold=True)
-        resultado_val.fill = self.fill_total
+        resultado_val.font = Font(name='Calibri', size=12, bold=True)
+        resultado_val.fill = PatternFill(start_color="B0D0FF", end_color="B0D0FF", fill_type="solid")
         resultado_val.border = self.border_thin
         
         # Ajustar ancho
-        ws.column_dimensions['A'].width = 30
+        ws.column_dimensions['A'].width = 40
         ws.column_dimensions['B'].width = 18
         
         return ws

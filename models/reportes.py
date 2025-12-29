@@ -82,3 +82,47 @@ class ReportesModel:
             ORDER BY p.codigo
         """
         return fetch_all(query)
+    
+    @staticmethod
+    def calcular_utilidad_impuesto():
+        """Calcula la utilidad del ejercicio y el impuesto por pagar"""
+        from config import IMPUESTO_RENTA_RATE
+        
+        cuentas = ReportesModel.get_estado_resultados()
+        
+        total_ingresos = 0
+        total_costos = 0
+        total_gastos = 0
+        
+        for codigo, nombre, elemento, categoria, debe, haber in cuentas:
+            if elemento == 'Ingreso':
+                # Ingresos: naturaleza acreedora (Haber - Debe)
+                total_ingresos += (haber - debe)
+            elif elemento == 'Costo':
+                # Costos: naturaleza deudora (Debe - Haber)
+                total_costos += (debe - haber)
+            elif elemento == 'Gasto':
+                # Gastos: naturaleza deudora (Debe - Haber)
+                total_gastos += (debe - haber)
+        
+        # Cálculo según estructura NIIF:
+        # Utilidad Bruta = Ingresos - Costos
+        # Resultado Operacional = Utilidad Bruta - Gastos Operacionales
+        # Resultado antes de impuesto = Resultado Operacional - Gastos Financieros - Otros
+        utilidad_antes_impuesto = total_ingresos - total_costos - total_gastos
+        
+        # Impuesto solo si hay utilidad
+        impuesto = utilidad_antes_impuesto * IMPUESTO_RENTA_RATE if utilidad_antes_impuesto > 0 else 0
+        
+        # Utilidad neta
+        utilidad_ejercicio = utilidad_antes_impuesto - impuesto
+        
+        return {
+            'utilidad_antes_impuesto': utilidad_antes_impuesto,
+            'impuesto': impuesto,
+            'utilidad_ejercicio': utilidad_ejercicio,
+            'total_ingresos': total_ingresos,
+            'total_costos': total_costos,
+            'total_gastos': total_gastos,
+            'utilidad_bruta': total_ingresos - total_costos
+        }
