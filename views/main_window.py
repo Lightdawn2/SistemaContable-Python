@@ -52,7 +52,6 @@ class MainWindow(tk.Tk):
         ttk.Separator(menu_frame, orient="horizontal").pack(fill="x", pady=10)
         
         self.create_menu_button(menu_frame, "Exportar a Excel", self.export_to_excel)
-        self.create_menu_button(menu_frame, "Resetear Sistema", self.reset_system)
         self.create_menu_button(menu_frame, "Salir", self.quit_app)
 
         # Sección del logo en la parte inferior del sidebar
@@ -163,60 +162,6 @@ class MainWindow(tk.Tk):
         """Cierra la aplicación"""
         if messagebox.askyesno("Salir", "¿Desea salir del sistema?"):
             self.quit()
-    
-    def reset_system(self):
-        """Resetea completamente el sistema - Elimina todos los datos"""
-        # Advertencia fuerte
-        respuesta = messagebox.askyesnocancel(
-            " RESETEAR SISTEMA",
-            " ADVERTENCIA CRÍTICA \n\n"
-            "Esta acción ELIMINARÁ PERMANENTEMENTE:\n"
-            "• Todo el Plan de Cuentas\n"
-            "• Todos los Comprobantes\n"
-            "• Todos los Libros de Compras y Ventas\n"
-            "• TODOS los datos del sistema\n\n"
-            "El sistema volverá a estar completamente VACÍO.\n\n"
-            "¿Está COMPLETAMENTE SEGURO de continuar?\n\n"
-            "Presione:\n"
-            "• SÍ para ELIMINAR TODO\n"
-            "• NO para cancelar\n"
-            "• CANCELAR para volver al menú",
-            icon='warning'
-        )
-        
-        if respuesta is True:  # Usuario confirmó con SÍ
-            # Confirmación doble
-            if messagebox.askyesno(
-                "Última Confirmación",
-                "Esta es su última oportunidad.\n\n"
-                "¿REALMENTE desea eliminar todos los datos?\n\n"
-                "Esta acción NO se puede deshacer."
-            ):
-                try:
-                    from database import reset_database
-                    
-                    # Limpiar área de contenido
-                    self.clear_content_area()
-                    
-                    # Resetear base de datos
-                    reset_database()
-                    
-                    # Mensaje de éxito
-                    messagebox.showinfo(
-                        "Sistema Reseteado",
-                        "Sistema reseteado exitosamente.\n\n"
-                        "El sistema está ahora completamente vacío.\n"
-                        "Puede comenzar a crear su Plan de Cuentas desde cero."
-                    )
-                    
-                    # Volver a mostrar Plan de Cuentas (ahora vacío)
-                    self.show_plan_cuentas()
-                    
-                except Exception as e:
-                    messagebox.showerror(
-                        "Error al Resetear",
-                        f"Error al resetear el sistema:\n{str(e)}"
-                    )
     
     def export_to_excel(self):
         """Exporta todos los datos a un archivo Excel"""
