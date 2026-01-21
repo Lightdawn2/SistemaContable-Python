@@ -47,19 +47,17 @@ class EstadoResultadosView(ttk.Frame):
         otros_gastos = []
 
         for codigo, nombre, elemento, categoria, debe, haber in cuentas:
-            if elemento == 'Ingreso':
+            if elemento == 'Ingresos':
                 saldo = haber - debe
                 if saldo != 0:
                     ingresos.append((codigo, nombre, saldo))
-            elif elemento == 'Costo':
+            elif elemento == 'Gastos':
                 saldo = debe - haber
                 if saldo != 0:
-                    costos.append((codigo, nombre, saldo))
-            elif elemento == 'Gasto':
-                saldo = debe - haber
-                if saldo != 0:
-                    # Clasificar gastos según su categoría
-                    if 'Administración' in categoria:
+                    # Clasificar entre costos y gastos según la categoría
+                    if 'Costo de Ventas' in categoria:
+                        costos.append((codigo, nombre, saldo))
+                    elif 'Administración' in categoria:
                         gastos_admin.append((codigo, nombre, saldo))
                     elif 'Ventas' in categoria or 'Comercial' in categoria:
                         gastos_ventas.append((codigo, nombre, saldo))

@@ -15,7 +15,7 @@ IMPUESTO_RENTA_RATE = 0.25  # 25%
 TIPOS_DOCUMENTO = ["Factura", "Boleta", "Nota de Crédito", "Nota de Débito"]
 
 # Elementos contables
-ELEMENTOS = ["Activo", "Pasivo", "Patrimonio", "Ingreso", "Costo", "Gasto"]
+ELEMENTOS = ["Activos", "Pasivos", "Patrimonio", "Ingresos", "Costos", "Gastos"]
 
 # Formato de fecha
 DATE_FORMAT = "%Y-%m-%d"

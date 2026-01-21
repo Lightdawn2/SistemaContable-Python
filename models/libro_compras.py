@@ -25,14 +25,39 @@ class LibroComprasModel:
         """
         Registra una nueva compra y genera el comprobante contable automáticamente
         Asiento: 
-        - Debe: Gasto/Costo (60001 - Gastos de Administración)
-        - Debe: IVA Crédito Fiscal (11008) (solo si NO es exenta)
-        - Haber: Proveedores (20001)
+        - Debe: Gasto/Costo (busca cuenta de gastos)
+        - Debe: IVA Crédito Fiscal (solo si NO es exenta)
+        - Haber: Proveedores
         """
         conn = get_connection()
         cursor = conn.cursor()
         
         try:
+            # Buscar códigos de cuentas dinámicamente
+            # Buscar cuenta de gastos de administración (cualquier gasto que no sea costo de ventas)
+            cursor.execute(
+                "SELECT codigo FROM plan_cuentas WHERE elemento = 'Gastos' AND categoria != 'Costo de Ventas' ORDER BY codigo LIMIT 1"
+            )
+            cuenta_gasto = cursor.fetchone()
+            
+            # Buscar IVA Crédito Fiscal
+            cursor.execute(
+                "SELECT codigo FROM plan_cuentas WHERE nombre LIKE '%IVA%' AND (nombre LIKE '%Cr_dito%' OR nombre LIKE '%Credito%') LIMIT 1"
+            )
+            cuenta_iva_cf = cursor.fetchone()
+            
+            # Buscar Proveedores
+            cursor.execute(
+                "SELECT codigo FROM plan_cuentas WHERE nombre LIKE '%Proveedor%' LIMIT 1"
+            )
+            cuenta_proveedores = cursor.fetchone()
+            
+            if not cuenta_gasto or not cuenta_proveedores:
+                raise Exception("No se encontraron las cuentas contables necesarias en el plan de cuentas. Asegúrese de tener creadas las cuentas: Gastos, Proveedores y opcionalmente IVA Crédito Fiscal.")
+            
+            if not exenta and not cuenta_iva_cf:
+                raise Exception("No se encontró la cuenta de IVA Crédito Fiscal en el plan de cuentas.")
+            
             # Generar glosa para el comprobante
             glosa = f"Compra {tipo_documento} N° {numero_documento} - {razon_social}"
             
@@ -49,7 +74,7 @@ class LibroComprasModel:
                 """INSERT INTO detalle_comprobantes 
                    (numero_comprobante, linea, codigo_cuenta, debe, haber) 
                    VALUES (?, ?, ?, ?, ?)""",
-                (numero_comprobante, 1, 60001, neto, 0)  # 60001 = Gastos de Administración
+                (numero_comprobante, 1, cuenta_gasto[0], neto, 0)
             )
             
             linea = 2
@@ -59,7 +84,7 @@ class LibroComprasModel:
                     """INSERT INTO detalle_comprobantes 
                        (numero_comprobante, linea, codigo_cuenta, debe, haber) 
                        VALUES (?, ?, ?, ?, ?)""",
-                    (numero_comprobante, linea, 11008, iva, 0)  # 11008 = IVA Crédito Fiscal
+                    (numero_comprobante, linea, cuenta_iva_cf[0], iva, 0)
                 )
                 linea += 1
             
@@ -68,7 +93,7 @@ class LibroComprasModel:
                 """INSERT INTO detalle_comprobantes 
                    (numero_comprobante, linea, codigo_cuenta, debe, haber) 
                    VALUES (?, ?, ?, ?, ?)""",
-                (numero_comprobante, linea, 20001, 0, total)  # 20001 = Proveedores
+                (numero_comprobante, linea, cuenta_proveedores[0], 0, total)
             )
             
             # 3. Registrar en libro de compras con referencia al comprobante

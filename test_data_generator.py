@@ -2,6 +2,12 @@
 Script para generar datos de prueba realistas según normativa chilena y NIIF
 Este script crea un caso de estudio completo con transacciones que permiten
 verificar que el balance cuadre correctamente.
+
+ACTUALIZADO: Usa el nuevo sistema de codificación D.CC.SS.NNNN según accounting.py
+- D: Elemento (1=Activos, 2=Pasivos, 3=Patrimonio, 4=Ingresos, 5=Gastos)
+- CC: Subcategoría (01-99)
+- SS: Subcuenta (01-99)
+- NNNN: Secuencial (0001-9999)
 """
 import sqlite3
 from datetime import datetime
@@ -24,74 +30,78 @@ def limpiar_datos():
 
 def insertar_plan_cuentas():
     """
-    Inserta un plan de cuentas básico según estructura chilena
-    Códigos según práctica contable chilena:
-    - 1xxxx: Activos
-    - 2xxxx: Pasivos
-    - 3xxxx: Patrimonio
-    - 4xxxx: Ingresos
-    - 5xxxx: Costos
-    - 6xxxx: Gastos
+    Inserta un plan de cuentas según el nuevo sistema de codificación NIIF/IFRS Chile
+    Formato de códigos: D.CC.SS.NNNN
+    - D: Elemento (1=Activos, 2=Pasivos, 3=Patrimonio, 4=Ingresos, 5=Gastos)
+    - CC: Subcategoría (01-99)
+    - SS: Subcuenta (01-99)
+    - NNNN: Secuencial (0001-9999)
     """
     conn = sqlite3.connect(DB_FILE)
     c = conn.cursor()
     
     cuentas = [
-        # ACTIVOS CORRIENTES (11xxx)
-        (11001, 'Caja', 'Activo', 'Activo Corriente', 'Disponible', 'Efectivo y Equivalentes'),
-        (11002, 'Banco Estado Cta Cte', 'Activo', 'Activo Corriente', 'Disponible', 'Efectivo y Equivalentes'),
-        (11003, 'Banco Chile Cta Cte', 'Activo', 'Activo Corriente', 'Disponible', 'Efectivo y Equivalentes'),
-        (11101, 'Clientes', 'Activo', 'Activo Corriente', 'Deudores Comerciales', 'Cuentas por Cobrar'),
-        (11102, 'Documentos por Cobrar', 'Activo', 'Activo Corriente', 'Deudores Comerciales', 'Cuentas por Cobrar'),
-        (11201, 'IVA Crédito Fiscal', 'Activo', 'Activo Corriente', 'Impuestos', 'Activos por Impuestos'),
-        (11301, 'Mercaderías', 'Activo', 'Activo Corriente', 'Inventarios', 'Existencias'),
+        # ACTIVOS CORRIENTES - 1.01.01.NNNN
+        ('1.01.01.0001', 'Caja', 'Activos', 'Activos Corrientes', 'Activos Corrientes', 'Efectivo y equivalentes al efectivo'),
+        ('1.01.01.0002', 'Banco Estado Cta Cte', 'Activos', 'Activos Corrientes', 'Activos Corrientes', 'Efectivo y equivalentes al efectivo'),
+        ('1.01.01.0003', 'Banco Chile Cta Cte', 'Activos', 'Activos Corrientes', 'Activos Corrientes', 'Efectivo y equivalentes al efectivo'),
+        ('1.01.03.0001', 'Clientes', 'Activos', 'Activos Corrientes', 'Activos Corrientes', 'Deudores comerciales y otras cuentas por cobrar, corrientes'),
+        ('1.01.03.0002', 'Documentos por Cobrar', 'Activos', 'Activos Corrientes', 'Activos Corrientes', 'Deudores comerciales y otras cuentas por cobrar, corrientes'),
+        ('1.01.07.0001', 'IVA Crédito Fiscal', 'Activos', 'Activos Corrientes', 'Activos Corrientes', 'Activos por impuestos, corrientes'),
+        ('1.01.05.0001', 'Mercaderías', 'Activos', 'Activos Corrientes', 'Activos Corrientes', 'Inventarios'),
         
-        # ACTIVOS NO CORRIENTES (12xxx)
-        (12001, 'Terrenos', 'Activo', 'Activo No Corriente', 'Propiedades Planta y Equipo', 'PPE'),
-        (12002, 'Edificios', 'Activo', 'Activo No Corriente', 'Propiedades Planta y Equipo', 'PPE'),
-        (12003, 'Vehículos', 'Activo', 'Activo No Corriente', 'Propiedades Planta y Equipo', 'PPE'),
-        (12004, 'Muebles y Útiles', 'Activo', 'Activo No Corriente', 'Propiedades Planta y Equipo', 'PPE'),
-        (12005, 'Equipos Computacionales', 'Activo', 'Activo No Corriente', 'Propiedades Planta y Equipo', 'PPE'),
-        (12101, 'Depreciación Acumulada Edificios', 'Activo', 'Activo No Corriente', 'Depreciación Acumulada', 'PPE'),
-        (12102, 'Depreciación Acumulada Vehículos', 'Activo', 'Activo No Corriente', 'Depreciación Acumulada', 'PPE'),
+        # ACTIVOS NO CORRIENTES - 1.02.07.NNNN (PPE)
+        ('1.02.07.0001', 'Terrenos', 'Activos', 'Activos No Corrientes', 'Activos No Corrientes', 'Propiedades, Planta y Equipo'),
+        ('1.02.07.0002', 'Edificios', 'Activos', 'Activos No Corrientes', 'Activos No Corrientes', 'Propiedades, Planta y Equipo'),
+        ('1.02.07.0003', 'Vehículos', 'Activos', 'Activos No Corrientes', 'Activos No Corrientes', 'Propiedades, Planta y Equipo'),
+        ('1.02.07.0004', 'Muebles y Útiles', 'Activos', 'Activos No Corrientes', 'Activos No Corrientes', 'Propiedades, Planta y Equipo'),
+        ('1.02.07.0005', 'Equipos Computacionales', 'Activos', 'Activos No Corrientes', 'Activos No Corrientes', 'Propiedades, Planta y Equipo'),
+        ('1.02.07.0006', 'Depreciación Acumulada Edificios', 'Activos', 'Activos No Corrientes', 'Activos No Corrientes', 'Propiedades, Planta y Equipo'),
+        ('1.02.07.0007', 'Depreciación Acumulada Vehículos', 'Activos', 'Activos No Corrientes', 'Activos No Corrientes', 'Propiedades, Planta y Equipo'),
         
-        # PASIVOS CORRIENTES (21xxx)
-        (21001, 'Proveedores', 'Pasivo', 'Pasivo Corriente', 'Cuentas por Pagar Comerciales', 'Acreedores'),
-        (21002, 'Documentos por Pagar', 'Pasivo', 'Pasivo Corriente', 'Cuentas por Pagar Comerciales', 'Acreedores'),
-        (21101, 'IVA Débito Fiscal', 'Pasivo', 'Pasivo Corriente', 'Impuestos', 'Pasivos por Impuestos'),
-        (21102, 'IVA por Pagar', 'Pasivo', 'Pasivo Corriente', 'Impuestos', 'Pasivos por Impuestos'),
-        (21201, 'Préstamos Bancarios Corto Plazo', 'Pasivo', 'Pasivo Corriente', 'Préstamos', 'Obligaciones Financieras'),
-        (21301, 'Remuneraciones por Pagar', 'Pasivo', 'Pasivo Corriente', 'Provisiones', 'Obligaciones Laborales'),
+        # PASIVOS CORRIENTES - 2.01.01.NNNN
+        ('2.01.02.0001', 'Proveedores', 'Pasivos', 'Pasivos Corrientes', 'Pasivos Corrientes', 'Cuentas comerciales y otras cuentas por pagar, corrientes'),
+        ('2.01.02.0002', 'Documentos por Pagar', 'Pasivos', 'Pasivos Corrientes', 'Pasivos Corrientes', 'Cuentas comerciales y otras cuentas por pagar, corrientes'),
+        ('2.01.04.0001', 'IVA Débito Fiscal', 'Pasivos', 'Pasivos Corrientes', 'Pasivos Corrientes', 'Pasivos por impuestos, corrientes'),
+        ('2.01.04.0002', 'IVA por Pagar', 'Pasivos', 'Pasivos Corrientes', 'Pasivos Corrientes', 'Pasivos por impuestos, corrientes'),
+        ('2.01.01.0001', 'Préstamos Bancarios Corto Plazo', 'Pasivos', 'Pasivos Corrientes', 'Pasivos Corrientes', 'Otros pasivos financieros, corrientes'),
+        ('2.01.05.0001', 'Remuneraciones por Pagar', 'Pasivos', 'Pasivos Corrientes', 'Pasivos Corrientes', 'Provisiones por beneficios a los empleados, corrientes'),
         
-        # PASIVOS NO CORRIENTES (22xxx)
-        (22001, 'Préstamos Bancarios Largo Plazo', 'Pasivo', 'Pasivo No Corriente', 'Préstamos', 'Obligaciones Financieras'),
-        (22002, 'Provisiones Largo Plazo', 'Pasivo', 'Pasivo No Corriente', 'Provisiones', 'Otras Provisiones'),
+        # PASIVOS NO CORRIENTES - 2.02.01.NNNN
+        ('2.02.01.0001', 'Préstamos Bancarios Largo Plazo', 'Pasivos', 'Pasivos No Corrientes', 'Pasivos No Corrientes', 'Otros pasivos financieros, no corrientes'),
+        ('2.02.03.0001', 'Provisiones Largo Plazo', 'Pasivos', 'Pasivos No Corrientes', 'Pasivos No Corrientes', 'Otras provisiones, no corrientes'),
         
-        # PATRIMONIO (31xxx)
-        (31001, 'Capital', 'Patrimonio', 'Capital', 'Capital Emitido', 'Capital Social'),
-        (31002, 'Reservas', 'Patrimonio', 'Otras Reservas', 'Reservas', 'Reservas'),
-        (31003, 'Resultados Acumulados', 'Patrimonio', 'Resultados Retenidos', 'Utilidades', 'Resultados'),
+        # PATRIMONIO - 3.01.01.NNNN
+        ('3.01.01.0001', 'Capital', 'Patrimonio', 'Patrimonio', 'Patrimonio', 'Capital emitido'),
+        ('3.01.06.0001', 'Reservas', 'Patrimonio', 'Patrimonio', 'Patrimonio', 'Otras reservas'),
+        ('3.01.02.0001', 'Resultados Acumulados', 'Patrimonio', 'Patrimonio', 'Patrimonio', 'Ganancias o Pérdidas acumuladas'),
         
-        # INGRESOS (41xxx)
-        (41001, 'Ventas de Mercaderías', 'Ingreso', 'Ingresos Ordinarios', 'Ventas', 'Ingresos de Actividades Ordinarias'),
-        (41002, 'Prestación de Servicios', 'Ingreso', 'Ingresos Ordinarios', 'Servicios', 'Ingresos de Actividades Ordinarias'),
-        (41101, 'Descuentos Otorgados', 'Ingreso', 'Ingresos Ordinarios', 'Descuentos', 'Descuentos y Rebajas'),
-        (41201, 'Intereses Ganados', 'Ingreso', 'Otros Ingresos', 'Financieros', 'Ingresos Financieros'),
+        # INGRESOS - 4.01.01.NNNN
+        ('4.01.01.0001', 'Ventas de Mercaderías', 'Ingresos', 'Ingresos de Actividades Ordinarias', 'Ingresos de Actividades Ordinarias', 'Venta de bienes'),
+        ('4.01.02.0001', 'Prestación de Servicios', 'Ingresos', 'Ingresos de Actividades Ordinarias', 'Ingresos de Actividades Ordinarias', 'Prestación de servicios'),
+        ('4.01.05.0001', 'Descuentos Otorgados', 'Ingresos', 'Ingresos de Actividades Ordinarias', 'Ingresos de Actividades Ordinarias', 'Otros ingresos de actividades ordinarias'),
+        ('4.02.02.0001', 'Intereses Ganados', 'Ingresos', 'Otros Ingresos', 'Otros Ingresos', 'Ingresos financieros'),
         
-        # COSTOS (51xxx)
-        (51001, 'Costo de Ventas', 'Costo', 'Costo de Ventas', 'Costo Mercaderías', 'Costo de Ventas'),
+        # GASTOS - 5.01.01.NNNN (Costo de Ventas)
+        ('5.01.01.0001', 'Costo de Ventas', 'Gastos', 'Costo de Ventas', 'Costo de Ventas', 'Costo de bienes vendidos'),
         
-        # GASTOS (61xxx)
-        (61001, 'Remuneraciones', 'Gasto', 'Gastos de Administración', 'Personal', 'Gastos de Personal'),
-        (61002, 'Honorarios', 'Gasto', 'Gastos de Administración', 'Personal', 'Gastos de Personal'),
-        (61003, 'Arriendos', 'Gasto', 'Gastos de Administración', 'Operacionales', 'Gastos Operacionales'),
-        (61004, 'Luz, Agua y Gas', 'Gasto', 'Gastos de Administración', 'Operacionales', 'Gastos Operacionales'),
-        (61005, 'Útiles de Oficina', 'Gasto', 'Gastos de Administración', 'Operacionales', 'Gastos Operacionales'),
-        (61101, 'Publicidad y Propaganda', 'Gasto', 'Gastos de Ventas', 'Marketing', 'Gastos de Comercialización'),
-        (61102, 'Comisiones de Ventas', 'Gasto', 'Gastos de Ventas', 'Comisiones', 'Gastos de Comercialización'),
-        (61201, 'Intereses Bancarios', 'Gasto', 'Gastos Financieros', 'Financieros', 'Costos Financieros'),
-        (61202, 'Comisiones Bancarias', 'Gasto', 'Gastos Financieros', 'Financieros', 'Costos Financieros'),
-        (61301, 'Depreciación del Ejercicio', 'Gasto', 'Gastos de Administración', 'Depreciación', 'Depreciaciones'),
+        # GASTOS DE ADMINISTRACIÓN - 5.02.01.NNNN
+        ('5.02.01.0001', 'Remuneraciones', 'Gastos', 'Gastos de Administración', 'Gastos de Administración', 'Sueldos y salarios'),
+        ('5.02.01.0002', 'Honorarios', 'Gastos', 'Gastos de Administración', 'Gastos de Administración', 'Sueldos y salarios'),
+        ('5.02.04.0001', 'Arriendos', 'Gastos', 'Gastos de Administración', 'Gastos de Administración', 'Gastos de arrendamiento'),
+        ('5.02.05.0001', 'Luz, Agua y Gas', 'Gastos', 'Gastos de Administración', 'Gastos de Administración', 'Gastos de servicios básicos'),
+        ('5.02.09.0001', 'Útiles de Oficina', 'Gastos', 'Gastos de Administración', 'Gastos de Administración', 'Otros gastos administrativos'),
+        
+        # GASTOS DE VENTAS - 5.03.01.NNNN
+        ('5.03.01.0001', 'Publicidad y Propaganda', 'Gastos', 'Gastos de Ventas', 'Gastos de Ventas', 'Gastos de publicidad y marketing'),
+        ('5.03.02.0001', 'Comisiones de Ventas', 'Gastos', 'Gastos de Ventas', 'Gastos de Ventas', 'Comisiones a vendedores'),
+        
+        # GASTOS FINANCIEROS - 5.04.01.NNNN
+        ('5.04.01.0001', 'Intereses Bancarios', 'Gastos', 'Gastos Financieros', 'Gastos Financieros', 'Gastos por intereses'),
+        ('5.04.02.0001', 'Comisiones Bancarias', 'Gastos', 'Gastos Financieros', 'Gastos Financieros', 'Gastos por comisiones'),
+        
+        # DEPRECIACIÓN
+        ('5.02.03.0001', 'Depreciación del Ejercicio', 'Gastos', 'Gastos de Administración', 'Gastos de Administración', 'Gastos de depreciación y amortización'),
     ]
     
     c.executemany(
@@ -101,7 +111,7 @@ def insertar_plan_cuentas():
     
     conn.commit()
     conn.close()
-    print(f"✓ {len(cuentas)} cuentas insertadas en el Plan de Cuentas")
+    print(f"✓ {len(cuentas)} cuentas insertadas en el Plan de Cuentas (nuevo formato D.CC.SS.NNNN)")
 
 def crear_asiento(conn, fecha, glosa, movimientos):
     """
@@ -135,10 +145,11 @@ def insertar_transacciones_ejemplo():
     """
     Inserta un conjunto de transacciones realistas para un caso de estudio
     Escenario: Empresa comercial "Demo SpA" - Enero 2025
+    ACTUALIZADO: Usa códigos del nuevo sistema D.CC.SS.NNNN
     """
     conn = sqlite3.connect(DB_FILE)
     
-    print("\n=== CREANDO TRANSACCIONES DE PRUEBA ===\n")
+    print("\n=== CREANDO TRANSACCIONES DE PRUEBA (Sistema NIIF/IFRS Chile) ===\n")
     
     # 1. Aporte de capital inicial
     print("1. Aporte de capital...")
@@ -147,8 +158,8 @@ def insertar_transacciones_ejemplo():
         "2025-01-02",
         "Aporte inicial de capital en efectivo",
         [
-            (11001, 50000000, 0),  # Caja DEBE
-            (31001, 0, 50000000),  # Capital HABER
+            ('1.01.01.0001', 50000000, 0),  # Caja DEBE
+            ('3.01.01.0001', 0, 50000000),  # Capital HABER
         ]
     )
     
@@ -159,8 +170,8 @@ def insertar_transacciones_ejemplo():
         "2025-01-02",
         "Depósito en Banco Estado desde caja",
         [
-            (11002, 40000000, 0),  # Banco Estado DEBE
-            (11001, 0, 40000000),  # Caja HABER
+            ('1.01.01.0002', 40000000, 0),  # Banco Estado DEBE
+            ('1.01.01.0001', 0, 40000000),  # Caja HABER
         ]
     )
     
@@ -175,9 +186,9 @@ def insertar_transacciones_ejemplo():
         "2025-01-05",
         "Compra mercaderías según Factura N°1234 - Proveedor XYZ Ltda",
         [
-            (11301, neto_compra, 0),      # Mercaderías DEBE
-            (11201, iva_compra, 0),       # IVA CF DEBE
-            (21001, 0, total_compra),     # Proveedores HABER
+            ('1.01.05.0001', neto_compra, 0),      # Mercaderías DEBE
+            ('1.01.07.0001', iva_compra, 0),       # IVA CF DEBE
+            ('2.01.02.0001', 0, total_compra),     # Proveedores HABER
         ]
     )
     
@@ -201,9 +212,9 @@ def insertar_transacciones_ejemplo():
         "2025-01-10",
         "Venta mercaderías según Factura N°0001 - Cliente ABC S.A.",
         [
-            (11101, total_venta, 0),      # Clientes DEBE
-            (41001, 0, neto_venta),       # Ventas HABER
-            (21101, 0, iva_venta),        # IVA DF HABER
+            ('1.01.03.0001', total_venta, 0),      # Clientes DEBE
+            ('4.01.01.0001', 0, neto_venta),       # Ventas HABER
+            ('2.01.04.0001', 0, iva_venta),        # IVA DF HABER
         ]
     )
     
@@ -223,8 +234,8 @@ def insertar_transacciones_ejemplo():
         "2025-01-10",
         "Costo de mercaderías vendidas",
         [
-            (51001, costo_ventas, 0),     # Costo de Ventas DEBE
-            (11301, 0, costo_ventas),     # Mercaderías HABER
+            ('5.01.01.0001', costo_ventas, 0),     # Costo de Ventas DEBE
+            ('1.01.05.0001', 0, costo_ventas),     # Mercaderías HABER
         ]
     )
     
@@ -236,8 +247,8 @@ def insertar_transacciones_ejemplo():
         "2025-01-15",
         "Pago 50% Factura N°1234 con transferencia bancaria",
         [
-            (21001, pago_proveedor, 0),   # Proveedores DEBE
-            (11002, 0, pago_proveedor),   # Banco HABER
+            ('2.01.02.0001', pago_proveedor, 0),   # Proveedores DEBE
+            ('1.01.01.0002', 0, pago_proveedor),   # Banco HABER
         ]
     )
     
@@ -248,8 +259,8 @@ def insertar_transacciones_ejemplo():
         "2025-01-18",
         "Cobro total Factura N°0001 depósito en banco",
         [
-            (11002, total_venta, 0),      # Banco DEBE
-            (11101, 0, total_venta),      # Clientes HABER
+            ('1.01.01.0002', total_venta, 0),      # Banco DEBE
+            ('1.01.03.0001', 0, total_venta),      # Clientes HABER
         ]
     )
     
@@ -261,8 +272,8 @@ def insertar_transacciones_ejemplo():
         "2025-01-25",
         "Pago remuneraciones mes de enero",
         [
-            (61001, remuneraciones, 0),   # Remuneraciones DEBE
-            (11002, 0, remuneraciones),   # Banco HABER
+            ('5.02.01.0001', remuneraciones, 0),   # Remuneraciones DEBE
+            ('1.01.01.0002', 0, remuneraciones),   # Banco HABER
         ]
     )
     
@@ -274,8 +285,8 @@ def insertar_transacciones_ejemplo():
         "2025-01-26",
         "Pago arriendo mes enero",
         [
-            (61003, arriendo, 0),         # Arriendos DEBE
-            (11002, 0, arriendo),         # Banco HABER
+            ('5.02.04.0001', arriendo, 0),         # Arriendos DEBE
+            ('1.01.01.0002', 0, arriendo),         # Banco HABER
         ]
     )
     
@@ -287,8 +298,8 @@ def insertar_transacciones_ejemplo():
         "2025-01-27",
         "Pago luz, agua y gas",
         [
-            (61004, servicios, 0),        # Servicios DEBE
-            (11001, 0, servicios),        # Caja HABER
+            ('5.02.05.0001', servicios, 0),        # Servicios DEBE
+            ('1.01.01.0001', 0, servicios),        # Caja HABER
         ]
     )
     
@@ -300,8 +311,8 @@ def insertar_transacciones_ejemplo():
         "2025-01-28",
         "Pago campaña publicitaria enero",
         [
-            (61101, publicidad, 0),       # Publicidad DEBE
-            (11002, 0, publicidad),       # Banco HABER
+            ('5.03.01.0001', publicidad, 0),       # Publicidad DEBE
+            ('1.01.01.0002', 0, publicidad),       # Banco HABER
         ]
     )
     
@@ -315,14 +326,14 @@ def insertar_transacciones_ejemplo():
             "2025-01-31",
             "Determinación IVA a pagar período enero",
             [
-                (21101, iva_venta, 0),        # IVA DF DEBE (cierre)
-                (11201, 0, iva_compra),       # IVA CF HABER (cierre)
-                (21102, 0, iva_a_pagar),      # IVA por Pagar HABER (resultado)
+                ('2.01.04.0001', iva_venta, 0),        # IVA DF DEBE (cierre)
+                ('1.01.07.0001', 0, iva_compra),       # IVA CF HABER (cierre)
+                ('2.01.04.0002', 0, iva_a_pagar),      # IVA por Pagar HABER (resultado)
             ]
         )
     
     conn.close()
-    print("\n✓ Todas las transacciones creadas exitosamente\n")
+    print("\n✓ Todas las transacciones creadas exitosamente con códigos NIIF/IFRS Chile\n")
 
 def verificar_balance():
     """Verifica que la ecuación contable se cumpla"""
@@ -341,10 +352,10 @@ def verificar_balance():
     total_patrimonio = 0
     
     for codigo, nombre, elemento, categoria, debe, haber in cuentas:
-        if elemento == 'Activo':
+        if elemento == 'Activos':
             saldo = debe - haber
             total_activo += saldo
-        elif elemento == 'Pasivo':
+        elif elemento == 'Pasivos':
             saldo = haber - debe
             total_pasivo += saldo
         elif elemento == 'Patrimonio':

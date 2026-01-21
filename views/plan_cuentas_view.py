@@ -1,10 +1,20 @@
 """
-Vista del Plan de Cuentas
+Vista del Plan de Cuentas con selección jerárquica profesional:
+Elemento → Subcategoría → Subcuenta (antes "Grupo").
+Las listas dependen del Excel/NIIF y se filtran según la selección del usuario.
+Códigos generados automáticamente siguiendo estándar NIIF/IFRS Chile: D.CC.SS.NNNN
 """
 import tkinter as tk
 from tkinter import ttk, messagebox
 from models.plan_cuentas import PlanCuentasModel
-from config import ELEMENTOS
+from utils.accounting import (
+    obtener_elementos,
+    obtener_categorias,
+    obtener_subcuentas,
+    validar_estructura,
+    generar_codigo_contable,
+)
+
 
 
 class PlanCuentasView(ttk.Frame):
@@ -13,6 +23,12 @@ class PlanCuentasView(ttk.Frame):
     def __init__(self, master=None):
         super().__init__(master)
         self.model = PlanCuentasModel()
+        # Migrar datos antiguos: mover categoría -> subcategoría y dejar categoría nula
+        try:
+            self.model.migrate_categoria_to_subcategoria()
+        except Exception:
+            # Si falla la migración, continuamos para no bloquear la UI
+            pass
         self.create_widgets()
         self.load_cuentas()
 
@@ -29,28 +45,30 @@ class PlanCuentasView(ttk.Frame):
         frm_form.pack(fill="x", padx=10, pady=6)
 
         ttk.Label(frm_form, text="Código:").grid(row=0, column=0, sticky="w")
-        self.ent_codigo = ttk.Entry(frm_form)
+        self.ent_codigo = ttk.Entry(frm_form, width=15, state="readonly")
         self.ent_codigo.grid(row=0, column=1, padx=4, pady=2, sticky="we")
-
+        
         ttk.Label(frm_form, text="Nombre:").grid(row=0, column=2, sticky="w")
         self.ent_nombre = ttk.Entry(frm_form)
         self.ent_nombre.grid(row=0, column=3, padx=4, pady=2, sticky="we")
 
         ttk.Label(frm_form, text="Elemento:").grid(row=1, column=0, sticky="w")
-        self.combo_elemento = ttk.Combobox(frm_form, values=ELEMENTOS)
+        self.combo_elemento = ttk.Combobox(frm_form, values=obtener_elementos(), state="readonly")
         self.combo_elemento.grid(row=1, column=1, padx=4, pady=2, sticky="we")
+        self.combo_elemento.bind("<<ComboboxSelected>>", self.on_elemento_change)
 
-        ttk.Label(frm_form, text="Categoría:").grid(row=1, column=2, sticky="w")
-        self.ent_categoria = ttk.Entry(frm_form)
-        self.ent_categoria.grid(row=1, column=3, padx=4, pady=2, sticky="we")
+        ttk.Label(frm_form, text="Subcategoría:").grid(row=1, column=2, sticky="w")
+        self.combo_subcategoria = ttk.Combobox(frm_form, values=[], state="readonly")
+        self.combo_subcategoria.grid(row=1, column=3, padx=4, pady=2, sticky="we")
+        self.combo_subcategoria.bind("<<ComboboxSelected>>", self.on_subcategoria_change)
 
-        ttk.Label(frm_form, text="Subcategoría:").grid(row=2, column=0, sticky="w")
-        self.ent_subcategoria = ttk.Entry(frm_form)
-        self.ent_subcategoria.grid(row=2, column=1, padx=4, pady=2, sticky="we")
+        ttk.Label(frm_form, text="Sub cuenta:").grid(row=2, column=0, sticky="w")
+        self.combo_subcuenta = ttk.Combobox(frm_form, values=[], state="readonly")
+        self.combo_subcuenta.grid(row=2, column=1, padx=4, pady=2, sticky="we")
+        self.combo_subcuenta.bind("<<ComboboxSelected>>", self.on_subcuenta_change)
 
-        ttk.Label(frm_form, text="Grupo:").grid(row=2, column=2, sticky="w")
-        self.ent_grupo = ttk.Entry(frm_form)
-        self.ent_grupo.grid(row=2, column=3, padx=4, pady=2, sticky="we")
+        ttk.Label(frm_form, text="").grid(row=2, column=2, sticky="w")  # placeholder para alineación
+        ttk.Label(frm_form, text="").grid(row=2, column=3, sticky="w")
 
         for i in range(4):
             frm_form.grid_columnconfigure(i, weight=1)
@@ -65,7 +83,7 @@ class PlanCuentasView(ttk.Frame):
         ttk.Button(frm_buttons, text="Limpiar", command=self.limpiar_campos).pack(side="left", padx=4)
 
         # Treeview
-        columns = ("codigo", "nombre", "elemento", "categoria", "subcategoria", "grupo")
+        columns = ("codigo", "nombre", "elemento", "subcategoria", "subcuenta")
         self.tree = ttk.Treeview(self, columns=columns, show="headings", selectmode="browse")
         for col in columns:
             self.tree.heading(col, text=col.capitalize())
@@ -87,19 +105,22 @@ class PlanCuentasView(ttk.Frame):
         codigo = self.ent_codigo.get().strip()
         nombre = self.ent_nombre.get().strip()
         elemento = self.combo_elemento.get().strip()
-        categoria = self.ent_categoria.get().strip()
-        subcategoria = self.ent_subcategoria.get().strip()
-        grupo = self.ent_grupo.get().strip()
+        subcategoria = self.combo_subcategoria.get().strip()
+        subcuenta = self.combo_subcuenta.get().strip()
 
-        if not codigo or not nombre or not elemento or not categoria:
-            messagebox.showwarning("Validación", "Código, Nombre, Elemento y Categoría son obligatorios.")
+        if not codigo or not nombre or not elemento or not subcategoria:
+            messagebox.showwarning("Validación", "Código, Nombre, Elemento y Subcategoría son obligatorios.")
+            return
+
+        if subcuenta and not validar_estructura(elemento, subcategoria, subcuenta):
+            messagebox.showwarning("Validación", "La subcuenta no corresponde a la subcategoría seleccionada.")
             return
 
         try:
-            self.model.create(int(codigo), nombre, elemento, categoria, subcategoria, grupo)
+            self.model.create(codigo, nombre, elemento, subcategoria, subcuenta)
             self.load_cuentas()
             self.limpiar_campos()
-            messagebox.showinfo("Éxito", "Cuenta agregada correctamente.")
+            messagebox.showinfo("Éxito", f"Cuenta '{codigo}' agregada correctamente.")
         except Exception as e:
             messagebox.showerror("Error", f"No se pudo agregar la cuenta: {str(e)}")
 
@@ -113,19 +134,22 @@ class PlanCuentasView(ttk.Frame):
         codigo = self.ent_codigo.get().strip()
         nombre = self.ent_nombre.get().strip()
         elemento = self.combo_elemento.get().strip()
-        categoria = self.ent_categoria.get().strip()
-        subcategoria = self.ent_subcategoria.get().strip()
-        grupo = self.ent_grupo.get().strip()
+        subcategoria = self.combo_subcategoria.get().strip()
+        subcuenta = self.combo_subcuenta.get().strip()
 
-        if not codigo or not nombre or not elemento or not categoria:
-            messagebox.showwarning("Validación", "Código, Nombre, Elemento y Categoría son obligatorios.")
+        if not codigo or not nombre or not elemento or not subcategoria:
+            messagebox.showwarning("Validación", "Código, Nombre, Elemento y Subcategoría son obligatorios.")
+            return
+
+        if subcuenta and not validar_estructura(elemento, subcategoria, subcuenta):
+            messagebox.showwarning("Validación", "La subcuenta no corresponde a la subcategoría seleccionada.")
             return
 
         try:
-            self.model.update(int(codigo), nombre, elemento, categoria, subcategoria, grupo)
+            self.model.update(codigo, nombre, elemento, subcategoria, subcuenta)
             self.load_cuentas()
             self.limpiar_campos()
-            messagebox.showinfo("Éxito", "Cuenta actualizada correctamente.")
+            messagebox.showinfo("Éxito", f"Cuenta '{codigo}' actualizada correctamente.")
         except Exception as e:
             messagebox.showerror("Error", f"No se pudo actualizar la cuenta: {str(e)}")
 
@@ -160,20 +184,57 @@ class PlanCuentasView(ttk.Frame):
         self.ent_nombre.delete(0, tk.END)
         self.ent_nombre.insert(0, vals[1])
         self.combo_elemento.set(vals[2])
-        self.ent_categoria.delete(0, tk.END)
-        self.ent_categoria.insert(0, vals[3])
-        self.ent_subcategoria.delete(0, tk.END)
-        self.ent_subcategoria.insert(0, vals[4] if vals[4] else "")
-        self.ent_grupo.delete(0, tk.END)
-        self.ent_grupo.insert(0, vals[5] if vals[5] else "")
+        self.on_elemento_change(None)  # actualizar subcategorías
+        self.combo_subcategoria.set(vals[3])
+        self.on_subcategoria_change(None)  # actualizar subcuentas
+        self.combo_subcuenta.set(vals[4] if vals[4] else "")
 
     def limpiar_campos(self):
         """Limpia todos los campos del formulario"""
         self.ent_codigo.delete(0, tk.END)
         self.ent_nombre.delete(0, tk.END)
         self.combo_elemento.set("")
-        self.ent_categoria.delete(0, tk.END)
-        self.ent_subcategoria.delete(0, tk.END)
-        self.ent_grupo.delete(0, tk.END)
+        self.combo_subcategoria.set("")
+        self.combo_subcuenta.set("")
         if self.tree.selection():
             self.tree.selection_remove(self.tree.selection())
+
+    def on_elemento_change(self, event):
+        """Actualiza subcategorías al cambiar elemento"""
+        elemento = self.combo_elemento.get()
+        subcategorias = obtener_categorias(elemento)
+        self.combo_subcategoria["values"] = subcategorias
+        self.combo_subcategoria.set("")
+        self.combo_subcuenta["values"] = []
+        self.combo_subcuenta.set("")
+
+    def on_subcategoria_change(self, event):
+        """Actualiza subcuentas al cambiar subcategoría"""
+        elemento = self.combo_elemento.get()
+        subcategoria = self.combo_subcategoria.get()
+        subcuentas = obtener_subcuentas(elemento, subcategoria)
+        self.combo_subcuenta["values"] = subcuentas
+        if subcuentas:
+            self.combo_subcuenta.set(subcuentas[0])
+        else:
+            self.combo_subcuenta.set("")
+        # Sugerir código automático
+        self.sugerir_codigo()
+
+    def on_subcuenta_change(self, event):
+        """Actualiza sugerencia de código al cambiar subcuenta"""
+        self.sugerir_codigo()
+
+    def sugerir_codigo(self):
+        """Sugiere el código automático basado en elemento, subcategoría y subcuenta"""
+        elemento = self.combo_elemento.get()
+        subcategoria = self.combo_subcategoria.get()
+        subcuenta = self.combo_subcuenta.get()
+        
+        if elemento and subcategoria and subcuenta:
+            codigo_sugerido = generar_codigo_contable(elemento, subcategoria, subcuenta)
+            # Cambiar a estado normal para escribir, luego volver a readonly
+            self.ent_codigo.config(state="normal")
+            self.ent_codigo.delete(0, tk.END)
+            self.ent_codigo.insert(0, codigo_sugerido)
+            self.ent_codigo.config(state="readonly")

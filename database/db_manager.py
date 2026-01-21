@@ -6,8 +6,11 @@ from config import DB_FILE
 
 
 def get_connection():
-    """Obtiene una conexión a la base de datos"""
-    return sqlite3.connect(DB_FILE)
+    """Obtiene una conexión a la base de datos con timeout configurable"""
+    conn = sqlite3.connect(DB_FILE, timeout=30.0, check_same_thread=False)
+    # Usar modo transaccional normal (mejor que autocommit para SQLite)
+    conn.isolation_level = ""  # Empty string = autocommit
+    return conn
 
 
 def init_db():
@@ -18,7 +21,7 @@ def init_db():
     # Tabla: Plan de Cuentas
     c.execute("""
         CREATE TABLE IF NOT EXISTS plan_cuentas (
-            codigo INTEGER PRIMARY KEY,
+            codigo TEXT PRIMARY KEY,
             nombre TEXT NOT NULL,
             elemento TEXT NOT NULL,
             categoria TEXT NOT NULL,
@@ -42,7 +45,7 @@ def init_db():
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             numero_comprobante INTEGER NOT NULL,
             linea INTEGER NOT NULL,
-            codigo_cuenta INTEGER NOT NULL,
+            codigo_cuenta TEXT NOT NULL,
             debe REAL DEFAULT 0,
             haber REAL DEFAULT 0,
             FOREIGN KEY (numero_comprobante) REFERENCES comprobantes(numero),
@@ -92,6 +95,7 @@ def init_db():
     """)
     
     conn.commit()
+    conn.close()
     
     # NO insertar plan de cuentas inicial - Los alumnos lo crearán desde cero
     # El sistema comienza completamente vacío para fines educativos

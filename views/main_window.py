@@ -17,9 +17,13 @@ class MainWindow(tk.Tk):
         self.geometry("1400x700")
         self.resizable(True, True)
         self.current_view = None
+        # Estado de desbloqueo de libros (persistente durante la sesión)
+        self.libros_desbloqueados = False
+        # Contraseña para desbloquear libros
+        self.PASSWORD_LIBROS = "Contabilidad2026$"
         self.create_widgets()
         # Mostrar Plan de Cuentas al iniciar
-        self.show_plan_cuentas()
+        self.show_esf()
 
     def create_widgets(self):
         """Crea el layout con panel lateral y área de contenido"""
@@ -51,6 +55,7 @@ class MainWindow(tk.Tk):
 
         ttk.Separator(menu_frame, orient="horizontal").pack(fill="x", pady=10)
         
+        self.create_menu_button(menu_frame, "Limpiar Base de Datos", self.clear_database)
         self.create_menu_button(menu_frame, "Exportar a Excel", self.export_to_excel)
         self.create_menu_button(menu_frame, "Salir", self.quit_app)
 
@@ -145,18 +150,127 @@ class MainWindow(tk.Tk):
         self.current_view.pack(fill="both", expand=True)
 
     def show_libro_compras(self):
-        """Muestra el Libro de Compras"""
+        """Muestra el Libro de Compras (requiere contraseña la primera vez)"""
+        # Verificar si los libros están desbloqueados
+        if not self.libros_desbloqueados:
+            if not self.solicitar_password():
+                return  # Si la contraseña es incorrecta, no abrir la vista
+        
         from views.libro_compras_view import LibroComprasView
         self.clear_content_area()
         self.current_view = LibroComprasView(self.content_area)
         self.current_view.pack(fill="both", expand=True)
 
     def show_libro_ventas(self):
-        """Muestra el Libro de Ventas"""
+        """Muestra el Libro de Ventas (requiere contraseña la primera vez)"""
+        # Verificar si los libros están desbloqueados
+        if not self.libros_desbloqueados:
+            if not self.solicitar_password():
+                return  # Si la contraseña es incorrecta, no abrir la vista
+        
         from views.libro_ventas_view import LibroVentasView
         self.clear_content_area()
         self.current_view = LibroVentasView(self.content_area)
         self.current_view.pack(fill="both", expand=True)
+    
+    def solicitar_password(self):
+        """Solicita contraseña para desbloquear los libros. Retorna True si es correcta."""
+        # Crear ventana modal
+        dialog = tk.Toplevel(self)
+        dialog.title("Acceso Restringido")
+        dialog.geometry("400x200")
+        dialog.resizable(False, False)
+        dialog.transient(self)
+        dialog.grab_set()
+        
+        # Centrar ventana
+        dialog.update_idletasks()
+        x = (dialog.winfo_screenwidth() // 2) - (dialog.winfo_width() // 2)
+        y = (dialog.winfo_screenheight() // 2) - (dialog.winfo_height() // 2)
+        dialog.geometry(f"+{x}+{y}")
+        
+        # Variable para almacenar el resultado
+        password_correcta = [False]
+        
+        # Frame principal
+        main_frame = ttk.Frame(dialog, padding="20")
+        main_frame.pack(fill="both", expand=True)
+        
+        # Mensaje informativo
+        ttk.Label(
+            main_frame,
+            text="Acceso a Libros de Compras y Ventas",
+            font=("Arial", 12, "bold")
+        ).pack(pady=(0, 10))
+        
+        ttk.Label(
+            main_frame,
+            text="Esta sección requiere contraseña.\nUna vez desbloqueada, permanecerá así durante la sesión.",
+            justify="center"
+        ).pack(pady=(0, 20))
+        
+        # Frame para entrada de contraseña
+        input_frame = ttk.Frame(main_frame)
+        input_frame.pack(pady=10)
+        
+        ttk.Label(input_frame, text="Contraseña:").pack(side="left", padx=(0, 10))
+        password_entry = ttk.Entry(input_frame, show="●", width=25)
+        password_entry.pack(side="left")
+        password_entry.focus()
+        
+        # Mensaje de error (inicialmente oculto)
+        error_label = ttk.Label(main_frame, text="", foreground="red")
+        error_label.pack(pady=(10, 0))
+        
+        def verificar_password():
+            """Verifica si la contraseña ingresada es correcta"""
+            password_ingresada = password_entry.get()
+            
+            if password_ingresada == self.PASSWORD_LIBROS:
+                # Contraseña correcta: desbloquear libros y cerrar diálogo
+                self.libros_desbloqueados = True
+                password_correcta[0] = True
+                messagebox.showinfo(
+                    "Acceso Concedido",
+                    "Los Libros de Compras y Ventas han sido desbloqueados.\n"
+                    "Permanecerán accesibles durante esta sesión.",
+                    parent=dialog
+                )
+                dialog.destroy()
+            else:
+                # Contraseña incorrecta: mostrar error
+                error_label.config(text="❌ Contraseña incorrecta")
+                password_entry.delete(0, tk.END)
+                password_entry.focus()
+        
+        def cancelar():
+            """Cierra el diálogo sin desbloquear"""
+            dialog.destroy()
+        
+        # Botones
+        button_frame = ttk.Frame(main_frame)
+        button_frame.pack(pady=20)
+        
+        ttk.Button(
+            button_frame,
+            text="Aceptar",
+            command=verificar_password
+        ).pack(side="left", padx=5)
+        
+        ttk.Button(
+            button_frame,
+            text="Cancelar",
+            command=cancelar
+        ).pack(side="left", padx=5)
+        
+        # Bind Enter key
+        password_entry.bind("<Return>", lambda e: verificar_password())
+        dialog.bind("<Escape>", lambda e: cancelar())
+        
+        # Esperar a que se cierre el diálogo
+        dialog.wait_window()
+        
+        return password_correcta[0]
     
     def quit_app(self):
         """Cierra la aplicación"""
@@ -186,3 +300,39 @@ class MainWindow(tk.Tk):
         
         export_thread = threading.Thread(target=do_export, daemon=True)
         export_thread.start()
+
+    def clear_database(self):
+        """Limpia la base de datos excepto el Plan de Cuentas"""
+        confirm = messagebox.askyesno(
+            "Limpiar Base de Datos",
+            "Se eliminarán TODOS los datos operativos (comprobantes, detalles, libros)\n"
+            "pero se mantendrá el Plan de Cuentas.\n\n"
+            "¿Desea continuar?"
+        )
+
+        if not confirm:
+            return
+
+        def do_clear():
+            try:
+                from database.queries import clear_all_data_except_plan_cuentas
+
+                counts = clear_all_data_except_plan_cuentas()
+                msg = (
+                    "Datos operativos eliminados correctamente.\n\n"
+                    "Detalle de borrado:\n"
+                    f"- Detalle de comprobantes: {counts.get('detalle_comprobantes', 0)} registros\n"
+                    f"- Comprobantes: {counts.get('comprobantes', 0)} registros\n"
+                    f"- Libro de Compras: {counts.get('libro_compras', 0)} registros\n"
+                    f"- Libro de Ventas: {counts.get('libro_ventas', 0)} registros\n"
+                )
+                messagebox.showinfo("Base de datos limpiada", msg)
+
+                # Volver a mostrar el estado financiero para refrescar vistas
+                self.show_esf()
+            except Exception as e:
+                messagebox.showerror(
+                    "Error", f"No se pudo limpiar la base de datos:\n{str(e)}"
+                )
+
+        threading.Thread(target=do_clear, daemon=True).start()

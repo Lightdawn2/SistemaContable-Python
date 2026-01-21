@@ -72,14 +72,14 @@ class EstadoSituacionView(ttk.Frame):
         patrimonio = []
 
         for codigo, nombre, elemento, categoria, debe, haber in cuentas:
-            if elemento == 'Activo':
+            if elemento == 'Activos':
                 saldo = debe - haber
                 if saldo != 0:
                     if 'Corriente' in categoria:
                         activos_corrientes.append((codigo, nombre, saldo))
                     else:
                         activos_no_corrientes.append((codigo, nombre, saldo))
-            elif elemento == 'Pasivo':
+            elif elemento == 'Pasivos':
                 saldo = haber - debe
                 if saldo != 0:
                     if 'Corriente' in categoria:
@@ -94,22 +94,24 @@ class EstadoSituacionView(ttk.Frame):
         # Insertar activos
         if activos_corrientes:
             parent_ac = self.tree_activos.insert("", "end", text="", 
-                                                 values=("ACTIVOS CORRIENTES", ""), tags=("bold",))
+                                                 values=("ACTIVOS CORRIENTES", ""), tags=("bold",), open=True)
             total_ac = sum(s for _, _, s in activos_corrientes)
             for codigo, nombre, saldo in activos_corrientes:
+                tags = ("negativo",) if saldo < 0 else ()
                 self.tree_activos.insert(parent_ac, "end", text="", 
-                                        values=(f"{codigo} - {nombre}", f"${saldo:,.0f}"))
+                                        values=(f"{codigo} - {nombre}", f"${saldo:,.0f}"), tags=tags)
             self.tree_activos.insert(parent_ac, "end", text="", 
                                     values=("Total Activos Corrientes", f"${total_ac:,.0f}"), 
                                     tags=("total",))
 
         if activos_no_corrientes:
             parent_anc = self.tree_activos.insert("", "end", text="", 
-                                                  values=("ACTIVOS NO CORRIENTES", ""), tags=("bold",))
+                                                  values=("ACTIVOS NO CORRIENTES", ""), tags=("bold",), open=True)
             total_anc = sum(s for _, _, s in activos_no_corrientes)
             for codigo, nombre, saldo in activos_no_corrientes:
+                tags = ("negativo",) if saldo < 0 else ()
                 self.tree_activos.insert(parent_anc, "end", text="", 
-                                        values=(f"{codigo} - {nombre}", f"${saldo:,.0f}"))
+                                        values=(f"{codigo} - {nombre}", f"${saldo:,.0f}"), tags=tags)
             self.tree_activos.insert(parent_anc, "end", text="", 
                                     values=("Total Activos No Corrientes", f"${total_anc:,.0f}"), 
                                     tags=("total",))
@@ -122,11 +124,12 @@ class EstadoSituacionView(ttk.Frame):
         # Insertar pasivos y patrimonio
         if pasivos_corrientes or impuesto_por_pagar > 0:
             parent_pc = self.tree_pasivos.insert("", "end", text="", 
-                                                 values=("PASIVOS CORRIENTES", ""), tags=("bold",))
+                                                 values=("PASIVOS CORRIENTES", ""), tags=("bold",), open=True)
             total_pc = sum(s for _, _, s in pasivos_corrientes)
             for codigo, nombre, saldo in pasivos_corrientes:
+                tags = ("negativo",) if saldo < 0 else ()
                 self.tree_pasivos.insert(parent_pc, "end", text="", 
-                                        values=(f"{codigo} - {nombre}", f"${saldo:,.0f}"))
+                                        values=(f"{codigo} - {nombre}", f"${saldo:,.0f}"), tags=tags)
             
             # Agregar Impuesto por Pagar si existe
             if impuesto_por_pagar > 0:
@@ -140,27 +143,30 @@ class EstadoSituacionView(ttk.Frame):
 
         if pasivos_no_corrientes:
             parent_pnc = self.tree_pasivos.insert("", "end", text="", 
-                                                  values=("PASIVOS NO CORRIENTES", ""), tags=("bold",))
+                                                  values=("PASIVOS NO CORRIENTES", ""), tags=("bold",), open=True)
             total_pnc = sum(s for _, _, s in pasivos_no_corrientes)
             for codigo, nombre, saldo in pasivos_no_corrientes:
+                tags = ("negativo",) if saldo < 0 else ()
                 self.tree_pasivos.insert(parent_pnc, "end", text="", 
-                                        values=(f"{codigo} - {nombre}", f"${saldo:,.0f}"))
+                                        values=(f"{codigo} - {nombre}", f"${saldo:,.0f}"), tags=tags)
             self.tree_pasivos.insert(parent_pnc, "end", text="", 
                                     values=("Total Pasivos No Corrientes", f"${total_pnc:,.0f}"), 
                                     tags=("total",))
 
         if patrimonio or utilidad_ejercicio != 0:
             parent_pat = self.tree_pasivos.insert("", "end", text="", 
-                                                  values=("PATRIMONIO", ""), tags=("bold",))
+                                                  values=("PATRIMONIO", ""), tags=("bold",), open=True)
             total_pat = sum(s for _, _, s in patrimonio)
             for codigo, nombre, saldo in patrimonio:
+                tags = ("negativo",) if saldo < 0 else ()
                 self.tree_pasivos.insert(parent_pat, "end", text="", 
-                                        values=(f"{codigo} - {nombre}", f"${saldo:,.0f}"))
+                                        values=(f"{codigo} - {nombre}", f"${saldo:,.0f}"), tags=tags)
             
             # Agregar Utilidad del Ejercicio
             if utilidad_ejercicio != 0:
+                tags = ("negativo",) if utilidad_ejercicio < 0 else ()
                 self.tree_pasivos.insert(parent_pat, "end", text="", 
-                                        values=("Utilidad del Ejercicio", f"${utilidad_ejercicio:,.0f}"))
+                                        values=("Utilidad del Ejercicio", f"${utilidad_ejercicio:,.0f}"), tags=tags)
                 total_pat += utilidad_ejercicio
             
             self.tree_pasivos.insert(parent_pat, "end", text="", 
@@ -181,3 +187,4 @@ class EstadoSituacionView(ttk.Frame):
             tree.tag_configure("bold", font=("Arial", 10, "bold"))
             tree.tag_configure("total", font=("Arial", 9, "bold"), background="#e0e0e0")
             tree.tag_configure("grand_total", font=("Arial", 11, "bold"), background="#c0c0c0")
+            tree.tag_configure("negativo", foreground="red")

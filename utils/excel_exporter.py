@@ -102,8 +102,7 @@ class ExcelExporter:
             for col_idx, value in enumerate(row_data, 1):
                 cell = ws.cell(row=row_idx, column=col_idx)
                 cell.value = value
-                if col_idx == 1:  # Código
-                    cell.number_format = '0'
+                # Todos los campos como texto (códigos son D.CC.SS.NNNN)
                 self.format_text(cell)
         
         # Ajustar ancho de columnas
@@ -155,11 +154,12 @@ class ExcelExporter:
                 cell = ws.cell(row=row_idx, column=col_idx)
                 cell.value = value
                 
-                if col_idx in [1, 4]:  # Números
+                if col_idx == 1:  # Nº Comprobante (número)
                     cell.number_format = '0'
+                    self.format_text(cell)
                 elif col_idx in [6, 7]:  # Moneda
                     self.format_number(cell)
-                else:
+                else:  # Col 4 es código (texto D.CC.SS.NNNN)
                     self.format_text(cell)
         
         # Ajustar ancho
@@ -221,13 +221,12 @@ class ExcelExporter:
                 cell = ws.cell(row=row_idx, column=col_idx)
                 cell.value = value
                 
-                if col_idx == 2:  # Nº Comp
+                if col_idx == 2:  # Nº Comp (número)
                     cell.number_format = '0'
-                elif col_idx == 3:  # Código
-                    cell.number_format = '0'
+                    self.format_text(cell)
                 elif col_idx in [5, 6]:  # Moneda
                     self.format_number(cell)
-                else:
+                else:  # Col 3 es código (texto D.CC.SS.NNNN)
                     self.format_text(cell)
         
         # Ajustar ancho
@@ -287,12 +286,12 @@ class ExcelExporter:
             ws.cell(row=row_idx, column=4).value = haber
             
             # Calcular saldo según naturaleza de la cuenta
-            if elemento in ['Activo', 'Gasto', 'Costo']:
+            if elemento in ['Activos', 'Gastos']:
                 # Cuentas de naturaleza DEUDORA: Saldo = Debe - Haber
                 saldo = debe - haber
                 saldo_d = saldo if saldo > 0 else 0
                 saldo_a = abs(saldo) if saldo < 0 else 0
-            else:  # Pasivo, Patrimonio, Ingreso
+            else:  # Pasivos, Patrimonio, Ingresos
                 # Cuentas de naturaleza ACREEDORA: Saldo = Haber - Debe
                 saldo = haber - debe
                 saldo_a = saldo if saldo > 0 else 0
@@ -349,7 +348,6 @@ class ExcelExporter:
         row = 3
         info_labels = [
             ("Fecha de Generación:", datetime.now().strftime("%d/%m/%Y %H:%M")),
-            ("Sistema:", "Sistema Contable Educativo"),
         ]
         
         for label, value in info_labels:
@@ -369,11 +367,15 @@ class ExcelExporter:
         plan_cuentas = fetch_all("SELECT COUNT(*) FROM plan_cuentas")
         comprobantes = fetch_all("SELECT COUNT(*) FROM comprobantes")
         detalles = fetch_all("SELECT COUNT(*) FROM detalle_comprobantes")
+        libro_compras = fetch_all("SELECT COUNT(*) FROM libro_compras")
+        libro_ventas = fetch_all("SELECT COUNT(*) FROM libro_ventas")
         
         stats = [
             ("Cuentas en Plan de Cuentas:", plan_cuentas[0][0] if plan_cuentas else 0),
             ("Comprobantes Registrados:", comprobantes[0][0] if comprobantes else 0),
             ("Asientos Contables:", detalles[0][0] if detalles else 0),
+            ("Registros en Libro de Compras:", libro_compras[0][0] if libro_compras else 0),
+            ("Registros en Libro de Ventas:", libro_ventas[0][0] if libro_ventas else 0),
         ]
         
         for label, value in stats:
@@ -386,9 +388,28 @@ class ExcelExporter:
             self.format_text(cell)
             row += 1
         
+        # Distribución por Elementos
+        row += 1
+        ws.cell(row=row, column=1).value = "DISTRIBUCIÓN DE CUENTAS POR ELEMENTO"
+        self.format_subheader(ws.cell(row=row, column=1))
+        row += 1
+        
+        elementos_query = "SELECT elemento, COUNT(*) FROM plan_cuentas GROUP BY elemento ORDER BY elemento"
+        elementos_data = fetch_all(elementos_query)
+        
+        for elemento, count in elementos_data:
+            ws.cell(row=row, column=1).value = f"{elemento}:"
+            ws.cell(row=row, column=2).value = count
+            self.format_text(ws.cell(row=row, column=1))
+            cell = ws.cell(row=row, column=2)
+            cell.value = count
+            cell.number_format = '0'
+            self.format_text(cell)
+            row += 1
+        
         # Validación de integridad
         row += 1
-        ws.cell(row=row, column=1).value = "VALIDACIÓN DE INTEGRIDAD"
+        ws.cell(row=row, column=1).value = "VALIDACIÓN DE INTEGRIDAD CONTABLE"
         self.format_subheader(ws.cell(row=row, column=1))
         row += 1
         
@@ -410,17 +431,89 @@ class ExcelExporter:
         self.format_number(ws.cell(row=row, column=2))
         row += 1
         
+        ws.cell(row=row, column=1).value = "Diferencia:"
+        ws.cell(row=row, column=2).value = abs(debe - haber)
+        self.format_text(ws.cell(row=row, column=1))
+        self.format_number(ws.cell(row=row, column=2))
+        row += 1
+        
         # Estado de cuadre
         ws.cell(row=row, column=1).value = "Estado de Cuadre:"
-        cuadra = "CUADRADO" if abs(debe - haber) < 0.01 else "NO CUADRA"
+        cuadra = "✓ CUADRADO" if abs(debe - haber) < 0.01 else "✗ NO CUADRA"
         cell = ws.cell(row=row, column=2)
         cell.value = cuadra
         cell.font = Font(name='Calibri', size=11, bold=True, 
                         color=self.color_success if "CUADRADO" in cuadra else self.color_error)
         self.format_text(ws.cell(row=row, column=1))
+        row += 1
+        
+        # Validación ecuación contable
+        row += 1
+        ws.cell(row=row, column=1).value = "VALIDACIÓN ECUACIÓN CONTABLE"
+        self.format_subheader(ws.cell(row=row, column=1))
+        row += 1
+        
+        # Calcular totales por elemento
+        activos_total = fetch_all("""
+            SELECT COALESCE(SUM(d.debe), 0) - COALESCE(SUM(d.haber), 0)
+            FROM plan_cuentas p
+            LEFT JOIN detalle_comprobantes d ON p.codigo = d.codigo_cuenta
+            WHERE p.elemento = 'Activos'
+        """)
+        
+        pasivos_total = fetch_all("""
+            SELECT COALESCE(SUM(d.haber), 0) - COALESCE(SUM(d.debe), 0)
+            FROM plan_cuentas p
+            LEFT JOIN detalle_comprobantes d ON p.codigo = d.codigo_cuenta
+            WHERE p.elemento = 'Pasivos'
+        """)
+        
+        patrimonio_total = fetch_all("""
+            SELECT COALESCE(SUM(d.haber), 0) - COALESCE(SUM(d.debe), 0)
+            FROM plan_cuentas p
+            LEFT JOIN detalle_comprobantes d ON p.codigo = d.codigo_cuenta
+            WHERE p.elemento = 'Patrimonio'
+        """)
+        
+        # Calcular utilidad del ejercicio
+        from models.reportes import ReportesModel
+        resultados = ReportesModel.calcular_utilidad_impuesto()
+        utilidad = resultados['utilidad_ejercicio']
+        
+        activos = activos_total[0][0] if activos_total else 0
+        pasivos = pasivos_total[0][0] if pasivos_total else 0
+        patrimonio = (patrimonio_total[0][0] if patrimonio_total else 0) + utilidad
+        
+        ws.cell(row=row, column=1).value = "Total Activos:"
+        ws.cell(row=row, column=2).value = activos
+        self.format_text(ws.cell(row=row, column=1))
+        self.format_number(ws.cell(row=row, column=2))
+        row += 1
+        
+        ws.cell(row=row, column=1).value = "Total Pasivos:"
+        ws.cell(row=row, column=2).value = pasivos
+        self.format_text(ws.cell(row=row, column=1))
+        self.format_number(ws.cell(row=row, column=2))
+        row += 1
+        
+        ws.cell(row=row, column=1).value = "Total Patrimonio (incluye utilidad):"
+        ws.cell(row=row, column=2).value = patrimonio
+        self.format_text(ws.cell(row=row, column=1))
+        self.format_number(ws.cell(row=row, column=2))
+        row += 1
+        
+        ws.cell(row=row, column=1).value = "Ecuación Contable (A = P + Pat):"
+        ecuacion_valida = abs(activos - (pasivos + patrimonio)) < 0.01
+        ecuacion_texto = "✓ VÁLIDA" if ecuacion_valida else "✗ NO VÁLIDA"
+        cell = ws.cell(row=row, column=2)
+        cell.value = ecuacion_texto
+        cell.font = Font(name='Calibri', size=11, bold=True, 
+                        color=self.color_success if ecuacion_valida else self.color_error)
+        self.format_text(ws.cell(row=row, column=1))
+        row += 1
         
         # Ajustar ancho
-        ws.column_dimensions['A'].width = 30
+        ws.column_dimensions['A'].width = 45
         ws.column_dimensions['B'].width = 25
         
         return ws
@@ -449,8 +542,8 @@ class ExcelExporter:
         
         # Secciones del estado
         secciones = [
-            ('Activo', 'Activo'),
-            ('Pasivo', 'Pasivo'),
+            ('Activo', 'Activos'),
+            ('Pasivo', 'Pasivos'),
             ('Patrimonio', 'Patrimonio')
         ]
         
@@ -481,11 +574,11 @@ class ExcelExporter:
             seccion_total = 0
             for codigo, nombre, debe, haber in data:
                 # Calcular saldo según naturaleza de la cuenta
-                if elemento == 'Activo':
-                    # Activo: naturaleza DEUDORA (Debe - Haber)
+                if elemento == 'Activos':
+                    # Activos: naturaleza DEUDORA (Debe - Haber)
                     saldo = debe - haber
                 else:
-                    # Pasivo y Patrimonio: naturaleza ACREEDORA (Haber - Debe)
+                    # Pasivos y Patrimonio: naturaleza ACREEDORA (Haber - Debe)
                     saldo = haber - debe
                 
                 ws.cell(row=row, column=1).value = nombre
@@ -496,7 +589,7 @@ class ExcelExporter:
                 row += 1
             
             # Agregar elementos calculados
-            if elemento == 'Pasivo' and impuesto_por_pagar > 0:
+            if elemento == 'Pasivos' and impuesto_por_pagar > 0:
                 ws.cell(row=row, column=1).value = "Impuesto por Pagar"
                 ws.cell(row=row, column=2).value = impuesto_por_pagar
                 self.format_text(ws.cell(row=row, column=1))
@@ -557,7 +650,7 @@ class ExcelExporter:
                 COALESCE(SUM(d.haber), 0) - COALESCE(SUM(d.debe), 0) as total_ingresos
             FROM plan_cuentas p
             LEFT JOIN detalle_comprobantes d ON p.codigo = d.codigo_cuenta
-            WHERE p.elemento = 'Ingreso'
+            WHERE p.elemento = 'Ingresos'
             GROUP BY p.codigo, p.nombre
             HAVING total_ingresos <> 0
             ORDER BY p.codigo
@@ -580,7 +673,7 @@ class ExcelExporter:
         self.format_total(total_ing, is_number=True)
         row += 2
         
-        # COSTO DE VENTAS
+        # COSTO DE VENTAS (usando subcategoría de Gastos)
         ws.cell(row=row, column=1).value = "COSTO DE VENTAS"
         self.format_subheader(ws.cell(row=row, column=1))
         row += 1
@@ -591,7 +684,7 @@ class ExcelExporter:
                 COALESCE(SUM(d.debe), 0) - COALESCE(SUM(d.haber), 0) as total_costos
             FROM plan_cuentas p
             LEFT JOIN detalle_comprobantes d ON p.codigo = d.codigo_cuenta
-            WHERE p.elemento = 'Costo'
+            WHERE p.elemento = 'Gastos' AND p.subcategoria LIKE '%Costo%'
             GROUP BY p.codigo, p.nombre
             HAVING total_costos <> 0
             ORDER BY p.codigo
@@ -634,7 +727,7 @@ class ExcelExporter:
                 COALESCE(SUM(d.debe), 0) - COALESCE(SUM(d.haber), 0) as total_gastos
             FROM plan_cuentas p
             LEFT JOIN detalle_comprobantes d ON p.codigo = d.codigo_cuenta
-            WHERE p.elemento = 'Gasto' AND p.categoria LIKE '%Administración%'
+            WHERE p.elemento = 'Gastos' AND p.subcategoria LIKE '%Administración%'
             GROUP BY p.codigo, p.nombre
             HAVING total_gastos <> 0
             ORDER BY p.codigo
@@ -668,7 +761,8 @@ class ExcelExporter:
                 COALESCE(SUM(d.debe), 0) - COALESCE(SUM(d.haber), 0) as total_gastos
             FROM plan_cuentas p
             LEFT JOIN detalle_comprobantes d ON p.codigo = d.codigo_cuenta
-            WHERE p.elemento = 'Gasto' AND (p.categoria LIKE '%Ventas%' OR p.categoria LIKE '%Comercial%')
+            WHERE p.elemento = 'Gastos' 
+              AND p.subcategoria LIKE '%Gastos de Ventas%'
             GROUP BY p.codigo, p.nombre
             HAVING total_gastos <> 0
             ORDER BY p.codigo
@@ -710,7 +804,7 @@ class ExcelExporter:
                 COALESCE(SUM(d.debe), 0) - COALESCE(SUM(d.haber), 0) as total_gastos
             FROM plan_cuentas p
             LEFT JOIN detalle_comprobantes d ON p.codigo = d.codigo_cuenta
-            WHERE p.elemento = 'Gasto' AND p.categoria LIKE '%Financier%'
+            WHERE p.elemento = 'Gastos' AND p.subcategoria LIKE '%Financier%'
             GROUP BY p.codigo, p.nombre
             HAVING total_gastos <> 0
             ORDER BY p.codigo
@@ -779,6 +873,132 @@ class ExcelExporter:
         
         return ws
     
+    def export_libro_compras(self):
+        """Exporta el Libro de Compras"""
+        ws = self.wb.create_sheet("Libro de Compras")
+        
+        # Título
+        ws.merge_cells('A1:H1')
+        title = ws['A1']
+        title.value = "LIBRO DE COMPRAS"
+        title.font = Font(name='Calibri', size=14, bold=True, color="FFFFFF")
+        title.fill = PatternFill(start_color=self.color_header, end_color=self.color_header, fill_type="solid")
+        title.alignment = Alignment(horizontal='center', vertical='center')
+        
+        # Encabezado
+        headers = ["Fecha", "Proveedor", "RUT", "N° Factura", "Neto", "IVA", "Total", "N° Comp."]
+        row = 2
+        for col, header in enumerate(headers, 1):
+            cell = ws.cell(row=row, column=col)
+            cell.value = header
+            self.format_header(cell)
+        
+        # Obtener datos
+        query = """
+            SELECT fecha, razon_social, rut_proveedor, numero_documento, 
+                   neto, iva, total, numero_comprobante
+            FROM libro_compras
+            ORDER BY fecha, numero_documento
+        """
+        data = fetch_all(query)
+        
+        # Llenar datos
+        row = 3
+        for row_data in data:
+            for col_idx, value in enumerate(row_data, 1):
+                cell = ws.cell(row=row, column=col_idx)
+                cell.value = value
+                
+                if col_idx in [5, 6, 7]:  # Montos
+                    self.format_number(cell)
+                elif col_idx == 8:  # Número comprobante
+                    cell.number_format = '0'
+                    self.format_text(cell)
+                else:
+                    self.format_text(cell)
+            row += 1
+        
+        # Totales
+        if data:
+            total_row = row
+            ws.cell(row=total_row, column=4).value = "TOTALES"
+            self.format_total(ws.cell(row=total_row, column=4))
+            
+            for col in [5, 6, 7]:
+                cell = ws.cell(row=total_row, column=col)
+                cell.value = f"=SUM({get_column_letter(col)}3:{get_column_letter(col)}{total_row-1})"
+                self.format_total(cell, is_number=True)
+        
+        # Ajustar ancho
+        widths = [12, 25, 15, 15, 14, 14, 14, 12]
+        for col, width in enumerate(widths, 1):
+            ws.column_dimensions[get_column_letter(col)].width = width
+        
+        return ws
+    
+    def export_libro_ventas(self):
+        """Exporta el Libro de Ventas"""
+        ws = self.wb.create_sheet("Libro de Ventas")
+        
+        # Título
+        ws.merge_cells('A1:H1')
+        title = ws['A1']
+        title.value = "LIBRO DE VENTAS"
+        title.font = Font(name='Calibri', size=14, bold=True, color="FFFFFF")
+        title.fill = PatternFill(start_color=self.color_header, end_color=self.color_header, fill_type="solid")
+        title.alignment = Alignment(horizontal='center', vertical='center')
+        
+        # Encabezado
+        headers = ["Fecha", "Cliente", "RUT", "N° Factura", "Neto", "IVA", "Total", "N° Comp."]
+        row = 2
+        for col, header in enumerate(headers, 1):
+            cell = ws.cell(row=row, column=col)
+            cell.value = header
+            self.format_header(cell)
+        
+        # Obtener datos
+        query = """
+            SELECT fecha, razon_social, rut_cliente, numero_documento, 
+                   neto, iva, total, numero_comprobante
+            FROM libro_ventas
+            ORDER BY fecha, numero_documento
+        """
+        data = fetch_all(query)
+        
+        # Llenar datos
+        row = 3
+        for row_data in data:
+            for col_idx, value in enumerate(row_data, 1):
+                cell = ws.cell(row=row, column=col_idx)
+                cell.value = value
+                
+                if col_idx in [5, 6, 7]:  # Montos
+                    self.format_number(cell)
+                elif col_idx == 8:  # Número comprobante
+                    cell.number_format = '0'
+                    self.format_text(cell)
+                else:
+                    self.format_text(cell)
+            row += 1
+        
+        # Totales
+        if data:
+            total_row = row
+            ws.cell(row=total_row, column=4).value = "TOTALES"
+            self.format_total(ws.cell(row=total_row, column=4))
+            
+            for col in [5, 6, 7]:
+                cell = ws.cell(row=total_row, column=col)
+                cell.value = f"=SUM({get_column_letter(col)}3:{get_column_letter(col)}{total_row-1})"
+                self.format_total(cell, is_number=True)
+        
+        # Ajustar ancho
+        widths = [12, 25, 15, 15, 14, 14, 14, 12]
+        for col, width in enumerate(widths, 1):
+            ws.column_dimensions[get_column_letter(col)].width = width
+        
+        return ws
+    
     def save(self, filename=None):
         """Guarda el archivo Excel"""
         if filename is None:
@@ -794,10 +1014,13 @@ def export_all_data(filename=None):
     Retorna la ruta del archivo generado
     """
     exporter = ExcelExporter()
-    exporter.export_resumen_evaluacion()
+    # Orden de hojas optimizado para evaluación
+    exporter.export_resumen_evaluacion()  # Primera hoja: resumen general
     exporter.export_plan_cuentas()
     exporter.export_comprobantes()
     exporter.export_libro_diario()
+    exporter.export_libro_compras()
+    exporter.export_libro_ventas()
     exporter.export_balance_comprobacion()
     exporter.export_estado_financiero()
     exporter.export_estado_resultados()

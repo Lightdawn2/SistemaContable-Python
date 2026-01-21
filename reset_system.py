@@ -44,7 +44,7 @@ def main():
         return 0
     
     # Proceder con el reseteo
-    print("\n🔄 Reseteando sistema...")
+    print("\n Reseteando sistema...")
     
     try:
         from database import reset_database
@@ -53,18 +53,18 @@ def main():
         reset_database()
         
         print("\n" + "="*70)
-        print("  ✅ SISTEMA RESETEADO EXITOSAMENTE")
+        print("   SISTEMA RESETEADO EXITOSAMENTE")
         print("="*70)
-        print("\n📋 El sistema está ahora completamente vacío.")
+        print("\n El sistema está ahora completamente vacío.")
         print("   Puede comenzar a crear su Plan de Cuentas desde cero.")
-        print("\n💡 Sugerencia: Para cargar datos de prueba, ejecute:")
+        print("\n Sugerencia: Para cargar datos de prueba, ejecute:")
         print("   python test_data_generator.py")
         print()
         
         return 0
         
     except Exception as e:
-        print(f"\n❌ ERROR al resetear el sistema:")
+        print(f"\n ERROR al resetear el sistema:")
         print(f"   {str(e)}")
         import traceback
         traceback.print_exc()

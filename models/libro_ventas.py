@@ -25,14 +25,36 @@ class LibroVentasModel:
         """
         Registra una nueva venta y genera el comprobante contable automáticamente
         Asiento:
-        - Debe: Clientes (11004)
-        - Haber: Ingresos por Ventas (40001)
-        - Haber: IVA Débito Fiscal (20004)
+        - Debe: Clientes
+        - Haber: Ingresos por Ventas
+        - Haber: IVA Débito Fiscal
         """
         conn = get_connection()
         cursor = conn.cursor()
         
         try:
+            # Buscar códigos de cuentas dinámicamente
+            # Buscar Clientes
+            cursor.execute(
+                "SELECT codigo FROM plan_cuentas WHERE nombre LIKE '%Cliente%' LIMIT 1"
+            )
+            cuenta_clientes = cursor.fetchone()
+            
+            # Buscar Ingresos por Ventas (cualquier cuenta de Ingresos)
+            cursor.execute(
+                "SELECT codigo FROM plan_cuentas WHERE elemento = 'Ingresos' ORDER BY codigo LIMIT 1"
+            )
+            cuenta_ventas = cursor.fetchone()
+            
+            # Buscar IVA Débito Fiscal
+            cursor.execute(
+                "SELECT codigo FROM plan_cuentas WHERE nombre LIKE '%IVA%' AND (nombre LIKE '%D_bito%' OR nombre LIKE '%Debito%') LIMIT 1"
+            )
+            cuenta_iva_df = cursor.fetchone()
+            
+            if not cuenta_clientes or not cuenta_ventas or not cuenta_iva_df:
+                raise Exception("No se encontraron las cuentas contables necesarias en el plan de cuentas. Asegúrese de tener creadas las cuentas: Clientes, Ingresos e IVA Débito Fiscal.")
+            
             # Generar glosa para el comprobante
             glosa = f"Venta {tipo_documento} N° {numero_documento} - {razon_social}"
             
@@ -49,7 +71,7 @@ class LibroVentasModel:
                 """INSERT INTO detalle_comprobantes 
                    (numero_comprobante, linea, codigo_cuenta, debe, haber) 
                    VALUES (?, ?, ?, ?, ?)""",
-                (numero_comprobante, 1, 11004, total, 0)  # 11004 = Clientes
+                (numero_comprobante, 1, cuenta_clientes[0], total, 0)
             )
             
             # Línea 2: Ingresos por Ventas (HABER)
@@ -57,7 +79,7 @@ class LibroVentasModel:
                 """INSERT INTO detalle_comprobantes 
                    (numero_comprobante, linea, codigo_cuenta, debe, haber) 
                    VALUES (?, ?, ?, ?, ?)""",
-                (numero_comprobante, 2, 40001, 0, neto)  # 40001 = Ingresos por Ventas
+                (numero_comprobante, 2, cuenta_ventas[0], 0, neto)
             )
             
             # Línea 3: IVA Débito Fiscal (HABER)
@@ -65,7 +87,7 @@ class LibroVentasModel:
                 """INSERT INTO detalle_comprobantes 
                    (numero_comprobante, linea, codigo_cuenta, debe, haber) 
                    VALUES (?, ?, ?, ?, ?)""",
-                (numero_comprobante, 3, 20004, 0, iva)  # 20004 = IVA Débito Fiscal
+                (numero_comprobante, 3, cuenta_iva_df[0], 0, iva)
             )
             
             # 3. Registrar en libro de ventas con referencia al comprobante

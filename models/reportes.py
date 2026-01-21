@@ -58,7 +58,7 @@ class ReportesModel:
                 COALESCE(SUM(d.haber), 0) as total_haber
             FROM plan_cuentas p
             LEFT JOIN detalle_comprobantes d ON p.codigo = d.codigo_cuenta
-            WHERE p.elemento IN ('Activo', 'Pasivo', 'Patrimonio')
+            WHERE p.elemento IN ('Activos', 'Pasivos', 'Patrimonio')
             GROUP BY p.codigo, p.nombre, p.elemento, p.categoria
             ORDER BY p.codigo
         """
@@ -77,7 +77,7 @@ class ReportesModel:
                 COALESCE(SUM(d.haber), 0) as total_haber
             FROM plan_cuentas p
             LEFT JOIN detalle_comprobantes d ON p.codigo = d.codigo_cuenta
-            WHERE p.elemento IN ('Ingreso', 'Costo', 'Gasto')
+            WHERE p.elemento IN ('Ingresos', 'Gastos')
             GROUP BY p.codigo, p.nombre, p.elemento, p.categoria
             ORDER BY p.codigo
         """
@@ -95,15 +95,16 @@ class ReportesModel:
         total_gastos = 0
         
         for codigo, nombre, elemento, categoria, debe, haber in cuentas:
-            if elemento == 'Ingreso':
+            if elemento == 'Ingresos':
                 # Ingresos: naturaleza acreedora (Haber - Debe)
                 total_ingresos += (haber - debe)
-            elif elemento == 'Costo':
-                # Costos: naturaleza deudora (Debe - Haber)
-                total_costos += (debe - haber)
-            elif elemento == 'Gasto':
+            elif elemento == 'Gastos':
                 # Gastos: naturaleza deudora (Debe - Haber)
-                total_gastos += (debe - haber)
+                # En el nuevo sistema, los costos están incluidos en Gastos
+                if 'Costo de Ventas' in categoria:
+                    total_costos += (debe - haber)
+                else:
+                    total_gastos += (debe - haber)
         
         # Cálculo según estructura NIIF:
         # Utilidad Bruta = Ingresos - Costos
